@@ -30,7 +30,7 @@ use Illuminate\Support\Str;
 class PaymentService
 {
     public function __construct(
-        private readonly PaymentGatewayInterface $gateway,
+        private readonly PaymentGatewayFactory $gatewayFactory,
         private readonly ReservationService $reservationService,
     ) {}
 
@@ -42,6 +42,7 @@ class PaymentService
      * Start a new payment flow for a reservation.
      *
      * @param  string       $paymentType     A PaymentType value (e.g. 'rent', 'deposit').
+     * @param  string       $provider        The payment provider ('stripe', 'paypal').
      * @param  string|null  $captureMethod   'automatic' (default) or 'manual' (authorize-only).
      * @return array{
      *     client_secret: string|null,
@@ -57,19 +58,20 @@ class PaymentService
     public function initiatePayment(
         Reservation $reservation,
         string $paymentType,
+        string $provider,
         ?string $captureMethod = 'automatic',
     ): array {
         $type   = PaymentType::from($paymentType);
         $amount = $this->resolveAmount($reservation, $type);
 
-        return DB::transaction(function () use ($reservation, $type, $amount, $captureMethod) {
+        return DB::transaction(function () use ($reservation, $type, $amount, $captureMethod, $provider) {
             $idempotencyKey = (string) Str::uuid();
 
             // 1. Persist Payment record -----------------------------------------
             $payment = Payment::create([
                 'reservation_id'      => $reservation->id,
                 'customer_id'         => $reservation->customer_id,
-                'provider'            => PaymentProvider::Stripe->value,
+                'provider'            => $provider,
                 'provider_payment_id' => null,  // filled after gateway call
                 'amount'              => $amount,
                 'currency'            => $reservation->currency ?? 'usd',
@@ -84,14 +86,17 @@ class PaymentService
                 'payment_id'     => $payment->id,
                 'reservation_id' => $reservation->id,
                 'customer_id'    => $reservation->customer_id,
-                'provider'       => PaymentProvider::Stripe->value,
+                'provider'       => $provider,
                 'provider_reference' => null,
                 'amount'         => $amount,
                 'status'         => PaymentAttemptStatus::Initiated->value,
             ]);
 
-            // 3. Call Stripe gateway --------------------------------------------
-            $response = $this->gateway->createPayment([
+            // Resolve gateway instance dynamically from Factory
+            $gateway = $this->gatewayFactory->make($provider);
+
+            // 3. Call gateway --------------------------------------------
+            $response = $gateway->createPayment([
                 'amount_cents'    => $this->toCents($amount),
                 'currency'        => $payment->currency,
                 'capture_method'  => $captureMethod,
@@ -146,8 +151,7 @@ class PaymentService
             ]);
 
             // 6. Return client-facing data --------------------------------------
-            $rawData      = $response->raw;
-            $clientSecret = $rawData['client_secret'] ?? null;
+            $clientSecret = $response->clientSecret;
 
             return [
                 'client_secret'     => $clientSecret,

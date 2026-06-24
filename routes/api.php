@@ -10,6 +10,7 @@ use App\Http\Controllers\Api\ReservationController;
 use App\Http\Controllers\Api\StripePaymentController;
 use App\Http\Controllers\Api\VehicleController;
 use App\Http\Controllers\Api\WebhookController;
+use App\Http\Controllers\Api\PayPalPaymentController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -73,7 +74,15 @@ Route::middleware(['auth:sanctum', 'role:customer'])->prefix('payments/stripe')-
     Route::post('confirm', [StripePaymentController::class, 'confirm']);
 });
 
-// Webhooks de proveedores de pago (sin auth, validación por firma) — Fase 6.
+// Pagos PayPal (cliente autenticado) — Fase 7.
+Route::middleware(['auth:sanctum', 'role:customer'])->prefix('payments/paypal')->group(function () {
+    Route::post('create-intent', [PayPalPaymentController::class, 'createIntent']);
+    Route::post('confirm', [PayPalPaymentController::class, 'confirm']);
+    Route::get('confirm-redirect', [PayPalPaymentController::class, 'confirmRedirect'])->name('api.payments.paypal.confirm');
+});
+
+// Webhooks de proveedores de pago (sin auth, validación por firma) — Fase 6/7.
 Route::prefix('payments/webhooks')->group(function () {
     Route::post('stripe', [WebhookController::class, 'handleStripe']);
+    Route::post('paypal', [WebhookController::class, 'handlePaypal']);
 });

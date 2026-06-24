@@ -12,16 +12,12 @@ use App\Models\PaymentAttempt;
 use App\Models\Reservation;
 use App\Models\User;
 use App\Models\Vehicle;
-use App\Services\Payments\PaymentGatewayInterface;
-use App\Services\Payments\PaymentGatewayResponse;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Mockery;
-use Mockery\MockInterface;
-use Stripe\Webhook;
+use Illuminate\Support\Facades\Http;
 use Tests\TestCase;
 
-class StripePaymentTest extends TestCase
+class PayPalPaymentTest extends TestCase
 {
     use RefreshDatabase;
 
@@ -29,7 +25,12 @@ class StripePaymentTest extends TestCase
     {
         parent::setUp();
         $this->seed(RolesAndPermissionsSeeder::class);
-        config(['rentcar.stripe.webhook_secret' => 'whsec_test']);
+        config([
+            'rentcar.paypal.client_id' => 'test_client_id',
+            'rentcar.paypal.client_secret' => 'test_client_secret',
+            'rentcar.paypal.webhook_id' => 'test_webhook_id',
+            'rentcar.paypal.sandbox' => true,
+        ]);
     }
 
     /**
@@ -55,99 +56,81 @@ class StripePaymentTest extends TestCase
     }
 
     /**
-     * Helper to post a signed Stripe webhook request.
+     * Fake PayPal REST API requests safely in one batch.
      */
-    private function postWebhook(array $payload, string $secret = 'whsec_test')
+    private function fakePayPalRequests(array $extraFakes = []): void
     {
-        $payloadJson = json_encode($payload);
-        $timestamp = time();
-        $signedPayload = "{$timestamp}.{$payloadJson}";
-        $hmac = hash_hmac('sha256', $signedPayload, $secret);
-        $signature = "t={$timestamp},v1={$hmac}";
-
-        return $this->call(
-            method: 'POST',
-            uri: '/api/v1/payments/webhooks/stripe',
-            parameters: [],
-            cookies: [],
-            files: [],
-            server: [
-                'HTTP_STRIPE_SIGNATURE' => $signature,
-                'CONTENT_TYPE' => 'application/json',
-            ],
-            content: $payloadJson
-        );
+        Http::fake(array_merge([
+            '*/v1/oauth2/token' => Http::response([
+                'access_token' => 'mock_access_token_123',
+                'expires_in' => 3600,
+            ], 200),
+            '*/v1/notifications/verify-webhook-signature' => Http::response([
+                'verification_status' => 'SUCCESS',
+            ], 200),
+        ], $extraFakes));
     }
 
-    public function test_create_intent_returns_client_secret(): void
+    public function test_create_intent_returns_approve_url(): void
     {
-        [$user, $customer] = $this->eligibleCustomer();
-        $vehicle = Vehicle::factory()->create(['daily_price' => '3000.00', 'deposit_amount' => '5000.00']);
+        $this->fakePayPalRequests([
+            '*/v2/checkout/orders' => Http::response([
+                'id' => '5O_TEST_ORDER_123',
+                'status' => 'CREATED',
+                'links' => [
+                    [
+                        'href' => 'https://www.sandbox.paypal.com/checkoutnow?token=5O_TEST_ORDER_123',
+                        'rel' => 'approve',
+                        'method' => 'GET'
+                    ]
+                ]
+            ], 201),
+        ]);
 
-        // Create a reservation for this customer in pending_payment state
+        [$user, $customer] = $this->eligibleCustomer();
+        $vehicle = Vehicle::factory()->create(['daily_price' => '30.00', 'deposit_amount' => '50.00']);
+
         $reservation = Reservation::create([
-            'reservation_number' => 'RES-12345',
+            'reservation_number' => 'RES-PP-123',
             'customer_id' => $customer->id,
             'vehicle_id' => $vehicle->id,
             'start_datetime' => '2026-07-01 10:00:00',
             'end_datetime' => '2026-07-03 10:00:00',
-            'base_price' => '6000.00',
+            'base_price' => '60.00',
             'delivery_fee' => '0.00',
             'insurance_fee' => '0.00',
-            'deposit_amount' => '5000.00',
+            'deposit_amount' => '50.00',
             'discount_amount' => '0.00',
-            'tax_amount' => '1080.00',
-            'total_amount' => '7080.00',
-            'currency' => 'DOP',
+            'tax_amount' => '10.80',
+            'total_amount' => '70.80',
+            'currency' => 'USD',
             'payment_status' => 'pending',
             'reservation_status' => ReservationStatus::PendingPayment,
         ]);
 
-        // Mock Stripe Gateway response
-        $mock = $this->mock(PaymentGatewayInterface::class, function (MockInterface $mock) use ($reservation) {
-            $mock->shouldReceive('createPayment')
-                ->once()
-                ->with(Mockery::on(function ($data) use ($reservation) {
-                    return $data['amount_cents'] === 708000
-                        && strtolower($data['currency']) === 'dop'
-                        && $data['capture_method'] === 'automatic';
-                }))
-                ->andReturn(PaymentGatewayResponse::success(
-                    status: 'requires_action',
-                    provider: 'stripe',
-                    amountCents: 708000,
-                    currency: 'DOP',
-                    providerPaymentId: 'pi_test_123',
-                    requiresAction: true,
-                    clientSecret: 'pi_test_123_secret_xyz',
-                    raw: ['client_secret' => 'pi_test_123_secret_xyz', 'id' => 'pi_test_123']
-                ));
-        });
-        $this->app->instance('payment.gateway.stripe', $mock);
-
-        $response = $this->actingAs($user)->postJson('/api/v1/payments/stripe/create-intent', [
+        $response = $this->actingAs($user)->postJson('/api/v1/payments/paypal/create-intent', [
             'reservation_id' => $reservation->id,
             'payment_type' => 'rent',
         ]);
 
         $response->assertOk()
-            ->assertJsonPath('client_secret', 'pi_test_123_secret_xyz')
-            ->assertJsonPath('payment_intent_id', 'pi_test_123')
-            ->assertJsonPath('status', PaymentStatus::RequiresAction->value)
-            ->assertJsonPath('amount', '7080.00');
+            ->assertJsonPath('approve_url', 'https://www.sandbox.paypal.com/checkoutnow?token=5O_TEST_ORDER_123')
+            ->assertJsonPath('payment_intent_id', '5O_TEST_ORDER_123')
+            ->assertJsonPath('status', 'pending') // mapOrderStatus maps CREATED -> pending
+            ->assertJsonPath('amount', '70.80');
 
         $this->assertDatabaseHas('payments', [
             'reservation_id' => $reservation->id,
             'customer_id' => $customer->id,
-            'amount' => '7080.00',
-            'status' => PaymentStatus::RequiresAction->value,
-            'provider_payment_id' => 'pi_test_123',
+            'amount' => '70.80',
+            'status' => PaymentStatus::Pending->value,
+            'provider_payment_id' => '5O_TEST_ORDER_123',
         ]);
 
         $this->assertDatabaseHas('payment_attempts', [
             'reservation_id' => $reservation->id,
-            'status' => PaymentAttemptStatus::RequiresAction->value,
-            'provider_reference' => 'pi_test_123',
+            'status' => PaymentAttemptStatus::Initiated->value,
+            'provider_reference' => '5O_TEST_ORDER_123',
         ]);
     }
 
@@ -157,18 +140,18 @@ class StripePaymentTest extends TestCase
         $vehicle = Vehicle::factory()->create();
 
         $reservation = Reservation::create([
-            'reservation_number' => 'RES-12346',
+            'reservation_number' => 'RES-PP-124',
             'customer_id' => $customer->id,
             'vehicle_id' => $vehicle->id,
             'start_datetime' => '2026-07-01 10:00:00',
             'end_datetime' => '2026-07-03 10:00:00',
-            'total_amount' => '7080.00',
-            'currency' => 'DOP',
+            'total_amount' => '70.80',
+            'currency' => 'USD',
             'payment_status' => 'paid',
             'reservation_status' => ReservationStatus::Paid, // Already Paid!
         ]);
 
-        $response = $this->actingAs($user)->postJson('/api/v1/payments/stripe/create-intent', [
+        $response = $this->actingAs($user)->postJson('/api/v1/payments/paypal/create-intent', [
             'reservation_id' => $reservation->id,
             'payment_type' => 'rent',
         ]);
@@ -184,19 +167,18 @@ class StripePaymentTest extends TestCase
         $vehicle = Vehicle::factory()->create();
 
         $reservationOfB = Reservation::create([
-            'reservation_number' => 'RES-12347',
+            'reservation_number' => 'RES-PP-125',
             'customer_id' => $customerB->id,
             'vehicle_id' => $vehicle->id,
             'start_datetime' => '2026-07-01 10:00:00',
             'end_datetime' => '2026-07-03 10:00:00',
-            'total_amount' => '7080.00',
-            'currency' => 'DOP',
+            'total_amount' => '70.80',
+            'currency' => 'USD',
             'payment_status' => 'pending',
             'reservation_status' => ReservationStatus::PendingPayment,
         ]);
 
-        // User A tries to pay for User B's reservation
-        $response = $this->actingAs($userA)->postJson('/api/v1/payments/stripe/create-intent', [
+        $response = $this->actingAs($userA)->postJson('/api/v1/payments/paypal/create-intent', [
             'reservation_id' => $reservationOfB->id,
             'payment_type' => 'rent',
         ]);
@@ -205,19 +187,21 @@ class StripePaymentTest extends TestCase
             ->assertJsonPath('code', 'FORBIDDEN');
     }
 
-    public function test_webhook_succeeded_marks_reservation_paid(): void
+    public function test_webhook_completed_marks_reservation_paid(): void
     {
+        $this->fakePayPalRequests();
+
         [$user, $customer] = $this->eligibleCustomer();
         $vehicle = Vehicle::factory()->create();
 
         $reservation = Reservation::create([
-            'reservation_number' => 'RES-12348',
+            'reservation_number' => 'RES-PP-126',
             'customer_id' => $customer->id,
             'vehicle_id' => $vehicle->id,
             'start_datetime' => '2026-07-01 10:00:00',
             'end_datetime' => '2026-07-03 10:00:00',
-            'total_amount' => '7080.00',
-            'currency' => 'DOP',
+            'total_amount' => '70.80',
+            'currency' => 'USD',
             'payment_status' => 'pending',
             'reservation_status' => ReservationStatus::PendingPayment,
         ]);
@@ -225,10 +209,10 @@ class StripePaymentTest extends TestCase
         $payment = Payment::create([
             'reservation_id' => $reservation->id,
             'customer_id' => $customer->id,
-            'provider' => 'stripe',
-            'provider_payment_id' => 'pi_test_succeeded',
-            'amount' => '7080.00',
-            'currency' => 'DOP',
+            'provider' => 'paypal',
+            'provider_payment_id' => '5O_TEST_ORDER_126',
+            'amount' => '70.80',
+            'currency' => 'USD',
             'status' => PaymentStatus::Pending->value,
             'payment_type' => PaymentType::Rent->value,
         ]);
@@ -237,28 +221,32 @@ class StripePaymentTest extends TestCase
             'payment_id' => $payment->id,
             'reservation_id' => $reservation->id,
             'customer_id' => $customer->id,
-            'provider' => 'stripe',
-            'provider_reference' => 'pi_test_succeeded',
-            'amount' => '7080.00',
+            'provider' => 'paypal',
+            'provider_reference' => '5O_TEST_ORDER_126',
+            'amount' => '70.80',
             'status' => PaymentAttemptStatus::Initiated->value,
         ]);
 
         $payload = [
-            'id' => 'evt_succeeded_123',
-            'object' => 'event',
-            'type' => 'payment_intent.succeeded',
-            'data' => [
-                'object' => [
-                    'id' => 'pi_test_succeeded',
-                    'object' => 'payment_intent',
-                    'amount' => 708000,
-                    'currency' => 'dop',
-                    'status' => 'succeeded',
+            'id' => 'evt_completed_123',
+            'event_type' => 'PAYMENT.CAPTURE.COMPLETED',
+            'resource' => [
+                'id' => 'cap_completed_123',
+                'custom_id' => (string) $payment->id,
+                'amount' => [
+                    'currency_code' => 'USD',
+                    'value' => '70.80',
                 ]
             ]
         ];
 
-        $response = $this->postWebhook($payload);
+        $response = $this->postJson('/api/v1/payments/webhooks/paypal', $payload, [
+            'paypal-transmission-id' => 'trans_123',
+            'paypal-transmission-time' => 'time_123',
+            'paypal-cert-url' => 'url_123',
+            'paypal-auth-algo' => 'algo_123',
+            'paypal-transmission-sig' => 'sig_123',
+        ]);
 
         $response->assertOk()
             ->assertJsonPath('status', 'ok');
@@ -266,6 +254,7 @@ class StripePaymentTest extends TestCase
         $this->assertDatabaseHas('payments', [
             'id' => $payment->id,
             'status' => PaymentStatus::Paid->value,
+            'provider_capture_id' => 'cap_completed_123',
         ]);
 
         $this->assertDatabaseHas('payment_attempts', [
@@ -280,19 +269,21 @@ class StripePaymentTest extends TestCase
         ]);
     }
 
-    public function test_webhook_failed_keeps_reservation_pending(): void
+    public function test_webhook_denied_keeps_reservation_pending(): void
     {
+        $this->fakePayPalRequests();
+
         [$user, $customer] = $this->eligibleCustomer();
         $vehicle = Vehicle::factory()->create();
 
         $reservation = Reservation::create([
-            'reservation_number' => 'RES-12349',
+            'reservation_number' => 'RES-PP-127',
             'customer_id' => $customer->id,
             'vehicle_id' => $vehicle->id,
             'start_datetime' => '2026-07-01 10:00:00',
             'end_datetime' => '2026-07-03 10:00:00',
-            'total_amount' => '7080.00',
-            'currency' => 'DOP',
+            'total_amount' => '70.80',
+            'currency' => 'USD',
             'payment_status' => 'pending',
             'reservation_status' => ReservationStatus::PendingPayment,
         ]);
@@ -300,10 +291,10 @@ class StripePaymentTest extends TestCase
         $payment = Payment::create([
             'reservation_id' => $reservation->id,
             'customer_id' => $customer->id,
-            'provider' => 'stripe',
-            'provider_payment_id' => 'pi_test_failed',
-            'amount' => '7080.00',
-            'currency' => 'DOP',
+            'provider' => 'paypal',
+            'provider_payment_id' => '5O_TEST_ORDER_127',
+            'amount' => '70.80',
+            'currency' => 'USD',
             'status' => PaymentStatus::Pending->value,
             'payment_type' => PaymentType::Rent->value,
         ]);
@@ -312,35 +303,34 @@ class StripePaymentTest extends TestCase
             'payment_id' => $payment->id,
             'reservation_id' => $reservation->id,
             'customer_id' => $customer->id,
-            'provider' => 'stripe',
-            'provider_reference' => 'pi_test_failed',
-            'amount' => '7080.00',
+            'provider' => 'paypal',
+            'provider_reference' => '5O_TEST_ORDER_127',
+            'amount' => '70.80',
             'status' => PaymentAttemptStatus::Initiated->value,
         ]);
 
         $payload = [
-            'id' => 'evt_failed_123',
-            'object' => 'event',
-            'type' => 'payment_intent.payment_failed',
-            'data' => [
-                'object' => [
-                    'id' => 'pi_test_failed',
-                    'object' => 'payment_intent',
-                    'amount' => 708000,
-                    'currency' => 'dop',
-                    'status' => 'requires_payment_method',
-                    'last_payment_error' => [
-                        'code' => 'card_declined',
-                        'message' => 'Your card was declined.',
-                    ]
+            'id' => 'evt_denied_123',
+            'event_type' => 'PAYMENT.CAPTURE.DENIED',
+            'resource' => [
+                'id' => 'cap_denied_123',
+                'custom_id' => (string) $payment->id,
+                'amount' => [
+                    'currency_code' => 'USD',
+                    'value' => '70.80',
                 ]
             ]
         ];
 
-        $response = $this->postWebhook($payload);
+        $response = $this->postJson('/api/v1/payments/webhooks/paypal', $payload, [
+            'paypal-transmission-id' => 'trans_123',
+            'paypal-transmission-time' => 'time_123',
+            'paypal-cert-url' => 'url_123',
+            'paypal-auth-algo' => 'algo_123',
+            'paypal-transmission-sig' => 'sig_123',
+        ]);
 
-        $response->assertOk()
-            ->assertJsonPath('status', 'ok');
+        $response->assertOk();
 
         $this->assertDatabaseHas('payments', [
             'id' => $payment->id,
@@ -350,8 +340,7 @@ class StripePaymentTest extends TestCase
         $this->assertDatabaseHas('payment_attempts', [
             'id' => $attempt->id,
             'status' => PaymentAttemptStatus::Failed->value,
-            'error_code' => 'card_declined',
-            'error_message' => 'Your card was declined.',
+            'error_code' => 'PAYMENT_DENIED',
         ]);
 
         $this->assertDatabaseHas('reservations', [
@@ -363,17 +352,19 @@ class StripePaymentTest extends TestCase
 
     public function test_webhook_idempotent_on_duplicate(): void
     {
+        $this->fakePayPalRequests();
+
         [$user, $customer] = $this->eligibleCustomer();
         $vehicle = Vehicle::factory()->create();
 
         $reservation = Reservation::create([
-            'reservation_number' => 'RES-12350',
+            'reservation_number' => 'RES-PP-128',
             'customer_id' => $customer->id,
             'vehicle_id' => $vehicle->id,
             'start_datetime' => '2026-07-01 10:00:00',
             'end_datetime' => '2026-07-03 10:00:00',
-            'total_amount' => '7080.00',
-            'currency' => 'DOP',
+            'total_amount' => '70.80',
+            'currency' => 'USD',
             'payment_status' => 'pending',
             'reservation_status' => ReservationStatus::PendingPayment,
         ]);
@@ -381,95 +372,110 @@ class StripePaymentTest extends TestCase
         $payment = Payment::create([
             'reservation_id' => $reservation->id,
             'customer_id' => $customer->id,
-            'provider' => 'stripe',
-            'provider_payment_id' => 'pi_test_idempotent',
-            'amount' => '7080.00',
-            'currency' => 'DOP',
+            'provider' => 'paypal',
+            'provider_payment_id' => '5O_TEST_ORDER_128',
+            'amount' => '70.80',
+            'currency' => 'USD',
             'status' => PaymentStatus::Pending->value,
             'payment_type' => PaymentType::Rent->value,
         ]);
 
-        $attempt = PaymentAttempt::create([
+        PaymentAttempt::create([
             'payment_id' => $payment->id,
             'reservation_id' => $reservation->id,
             'customer_id' => $customer->id,
-            'provider' => 'stripe',
-            'provider_reference' => 'pi_test_idempotent',
-            'amount' => '7080.00',
+            'provider' => 'paypal',
+            'provider_reference' => '5O_TEST_ORDER_128',
+            'amount' => '70.80',
             'status' => PaymentAttemptStatus::Initiated->value,
         ]);
 
         $payload = [
-            'id' => 'evt_idempotent_123',
-            'object' => 'event',
-            'type' => 'payment_intent.succeeded',
-            'data' => [
-                'object' => [
-                    'id' => 'pi_test_idempotent',
-                    'object' => 'payment_intent',
-                    'amount' => 708000,
-                    'currency' => 'dop',
-                    'status' => 'succeeded',
+            'id' => 'evt_completed_128',
+            'event_type' => 'PAYMENT.CAPTURE.COMPLETED',
+            'resource' => [
+                'id' => 'cap_completed_128',
+                'custom_id' => (string) $payment->id,
+                'amount' => [
+                    'currency_code' => 'USD',
+                    'value' => '70.80',
                 ]
             ]
         ];
 
-        // First call
-        $response1 = $this->postWebhook($payload);
-        $response1->assertOk();
+        $headers = [
+            'paypal-transmission-id' => 'trans_123',
+            'paypal-transmission-time' => 'time_123',
+            'paypal-cert-url' => 'url_123',
+            'paypal-auth-algo' => 'algo_123',
+            'paypal-transmission-sig' => 'sig_123',
+        ];
 
+        // Call 1
+        $this->postJson('/api/v1/payments/webhooks/paypal', $payload, $headers)->assertOk();
         $this->assertEquals(PaymentStatus::Paid, $payment->fresh()->status);
 
-        // Second call (duplicate)
-        $response2 = $this->postWebhook($payload);
-        $response2->assertOk();
-
-        // Ensure nothing changed, state remains Paid, no extra entries created.
+        // Call 2
+        $this->postJson('/api/v1/payments/webhooks/paypal', $payload, $headers)->assertOk();
         $this->assertEquals(PaymentStatus::Paid, $payment->fresh()->status);
+
         $this->assertEquals(1, PaymentAttempt::where('payment_id', $payment->id)->count());
     }
 
     public function test_webhook_rejects_invalid_signature(): void
     {
+        // Fake Verification Failure
+        $this->fakePayPalRequests([
+            '*/v1/notifications/verify-webhook-signature' => Http::response([
+                'verification_status' => 'FAILURE',
+            ], 200),
+        ]);
+
         $payload = [
             'id' => 'evt_invalid_123',
-            'object' => 'event',
-            'type' => 'payment_intent.succeeded',
+            'event_type' => 'PAYMENT.CAPTURE.COMPLETED',
         ];
 
-        // Post with wrong secret, which creates an invalid signature header for whsec_test.
-        $response = $this->postWebhook($payload, 'whsec_wrong_secret');
+        $response = $this->postJson('/api/v1/payments/webhooks/paypal', $payload, [
+            'paypal-transmission-id' => 'trans_123',
+            'paypal-transmission-time' => 'time_123',
+            'paypal-cert-url' => 'url_123',
+            'paypal-auth-algo' => 'algo_123',
+            'paypal-transmission-sig' => 'sig_invalid',
+        ]);
 
         $response->assertStatus(400)
-            ->assertJsonPath('error', 'Invalid signature');
+            ->assertJsonPath('error', 'Invalid PayPal webhook signature.');
     }
 
     public function test_double_payment_prevented(): void
     {
+        $this->fakePayPalRequests();
+
         [$user, $customer] = $this->eligibleCustomer();
         $vehicle = Vehicle::factory()->create();
 
-        // Create two overlapping reservations for the same vehicle
+        // Two overlapping reservations
         $reservationA = Reservation::create([
-            'reservation_number' => 'RES-DOUBLE-A',
+            'reservation_number' => 'RES-PP-DOUBLE-A',
             'customer_id' => $customer->id,
             'vehicle_id' => $vehicle->id,
             'start_datetime' => '2026-07-01 10:00:00',
             'end_datetime' => '2026-07-03 10:00:00',
-            'total_amount' => '7080.00',
-            'currency' => 'DOP',
+            'total_amount' => '70.80',
+            'currency' => 'USD',
             'payment_status' => 'pending',
             'reservation_status' => ReservationStatus::PendingPayment,
         ]);
 
         $reservationB = Reservation::create([
-            'reservation_number' => 'RES-DOUBLE-B',
+            'reservation_number' => 'RES-PP-DOUBLE-B',
             'customer_id' => $customer->id,
             'vehicle_id' => $vehicle->id,
             'start_datetime' => '2026-07-01 10:00:00',
-            'end_datetime' => '2026-07-03 10:00:00', // exact same overlap
-            'total_amount' => '7080.00',
-            'currency' => 'DOP',
+            'end_datetime' => '2026-07-03 10:00:00',
+            'total_amount' => '70.80',
+            'currency' => 'USD',
             'payment_status' => 'pending',
             'reservation_status' => ReservationStatus::PendingPayment,
         ]);
@@ -477,10 +483,10 @@ class StripePaymentTest extends TestCase
         $paymentA = Payment::create([
             'reservation_id' => $reservationA->id,
             'customer_id' => $customer->id,
-            'provider' => 'stripe',
-            'provider_payment_id' => 'pi_test_double_a',
-            'amount' => '7080.00',
-            'currency' => 'DOP',
+            'provider' => 'paypal',
+            'provider_payment_id' => '5O_TEST_DOUBLE_A',
+            'amount' => '70.80',
+            'currency' => 'USD',
             'status' => PaymentStatus::Pending->value,
             'payment_type' => PaymentType::Rent->value,
         ]);
@@ -489,19 +495,19 @@ class StripePaymentTest extends TestCase
             'payment_id' => $paymentA->id,
             'reservation_id' => $reservationA->id,
             'customer_id' => $customer->id,
-            'provider' => 'stripe',
-            'provider_reference' => 'pi_test_double_a',
-            'amount' => '7080.00',
+            'provider' => 'paypal',
+            'provider_reference' => '5O_TEST_DOUBLE_A',
+            'amount' => '70.80',
             'status' => PaymentAttemptStatus::Initiated->value,
         ]);
 
         $paymentB = Payment::create([
             'reservation_id' => $reservationB->id,
             'customer_id' => $customer->id,
-            'provider' => 'stripe',
-            'provider_payment_id' => 'pi_test_double_b',
-            'amount' => '7080.00',
-            'currency' => 'DOP',
+            'provider' => 'paypal',
+            'provider_payment_id' => '5O_TEST_DOUBLE_B',
+            'amount' => '70.80',
+            'currency' => 'USD',
             'status' => PaymentStatus::Pending->value,
             'payment_type' => PaymentType::Rent->value,
         ]);
@@ -510,55 +516,55 @@ class StripePaymentTest extends TestCase
             'payment_id' => $paymentB->id,
             'reservation_id' => $reservationB->id,
             'customer_id' => $customer->id,
-            'provider' => 'stripe',
-            'provider_reference' => 'pi_test_double_b',
-            'amount' => '7080.00',
+            'provider' => 'paypal',
+            'provider_reference' => '5O_TEST_DOUBLE_B',
+            'amount' => '70.80',
             'status' => PaymentAttemptStatus::Initiated->value,
         ]);
+
+        $headers = [
+            'paypal-transmission-id' => 'trans_123',
+            'paypal-transmission-time' => 'time_123',
+            'paypal-cert-url' => 'url_123',
+            'paypal-auth-algo' => 'algo_123',
+            'paypal-transmission-sig' => 'sig_123',
+        ];
 
         // 1. Post webhook for A -> should succeed
         $payloadA = [
             'id' => 'evt_double_a',
-            'object' => 'event',
-            'type' => 'payment_intent.succeeded',
-            'data' => [
-                'object' => [
-                    'id' => 'pi_test_double_a',
-                    'object' => 'payment_intent',
-                    'amount' => 708000,
-                    'currency' => 'dop',
-                    'status' => 'succeeded',
+            'event_type' => 'PAYMENT.CAPTURE.COMPLETED',
+            'resource' => [
+                'id' => 'cap_double_a',
+                'custom_id' => (string) $paymentA->id,
+                'amount' => [
+                    'currency_code' => 'USD',
+                    'value' => '70.80',
                 ]
             ]
         ];
 
-        $responseA = $this->postWebhook($payloadA);
-        $responseA->assertOk();
+        $this->postJson('/api/v1/payments/webhooks/paypal', $payloadA, $headers)->assertOk();
 
         $this->assertEquals(PaymentStatus::Paid, $paymentA->fresh()->status);
         $this->assertEquals(ReservationStatus::Paid, $reservationA->fresh()->reservation_status);
 
-        // 2. Post webhook for B -> should fail because V is now blocked by A
+        // 2. Post webhook for B -> should fail to mark paid because A has now blocked the vehicle
         $payloadB = [
             'id' => 'evt_double_b',
-            'object' => 'event',
-            'type' => 'payment_intent.succeeded',
-            'data' => [
-                'object' => [
-                    'id' => 'pi_test_double_b',
-                    'object' => 'payment_intent',
-                    'amount' => 708000,
-                    'currency' => 'dop',
-                    'status' => 'succeeded',
+            'event_type' => 'PAYMENT.CAPTURE.COMPLETED',
+            'resource' => [
+                'id' => 'cap_double_b',
+                'custom_id' => (string) $paymentB->id,
+                'amount' => [
+                    'currency_code' => 'USD',
+                    'value' => '70.80',
                 ]
             ]
         ];
 
-        $responseB = $this->postWebhook($payloadB);
-        // Should return 200 (since WebhookController catches domain exceptions and returns 200)
-        $responseB->assertOk();
+        $this->postJson('/api/v1/payments/webhooks/paypal', $payloadB, $headers)->assertOk();
 
-        // But reservation B should NOT be paid, and payment B status should remain pending/rolled-back.
         $this->assertEquals(PaymentStatus::Pending, $paymentB->fresh()->status);
         $this->assertEquals(ReservationStatus::PendingPayment, $reservationB->fresh()->reservation_status);
     }

@@ -6,6 +6,8 @@ use App\Services\Payments\PaymentGatewayInterface;
 use App\Services\Payments\StripePaymentGateway;
 use Illuminate\Support\ServiceProvider;
 
+use App\Services\Payments\PayPalPaymentGateway;
+
 class AppServiceProvider extends ServiceProvider
 {
     /**
@@ -13,12 +15,30 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        // Gateway de pago por defecto: Stripe (Fase 6).
-        // En Fase 7 (PayPal) se cambiará a un factory/resolver por proveedor.
-        $this->app->bind(PaymentGatewayInterface::class, function ($app) {
+        // Named and class bindings for the gateways (Fase 7)
+        $this->app->singleton(StripePaymentGateway::class, function ($app) {
             return new StripePaymentGateway(
                 config('rentcar.stripe.secret_key', ''),
             );
+        });
+        $this->app->bind('payment.gateway.stripe', function ($app) {
+            return $app->make(StripePaymentGateway::class);
+        });
+
+        $this->app->singleton(PayPalPaymentGateway::class, function ($app) {
+            return new PayPalPaymentGateway(
+                clientId: config('rentcar.paypal.client_id', ''),
+                clientSecret: config('rentcar.paypal.client_secret', ''),
+                sandbox: config('rentcar.paypal.sandbox', true),
+            );
+        });
+        $this->app->bind('payment.gateway.paypal', function ($app) {
+            return $app->make(PayPalPaymentGateway::class);
+        });
+
+        // Fallback default interface binding to Stripe gateway
+        $this->app->bind(PaymentGatewayInterface::class, function ($app) {
+            return $app->make(StripePaymentGateway::class);
         });
     }
 
