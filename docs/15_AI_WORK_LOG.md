@@ -420,5 +420,52 @@ Fase 9 — Retención y Captura de Depósitos de Seguridad.
 
 ---
 
+## 2026-06-24 - Antigravity (Gemini Advanced Agent)
+
+### Tarea
+Fase 10 — Sistema de Contratos Digitales (PDF y Firma Simple).
+
+### Cambios realizados
+- **Esquema de BD y Modelos**:
+  - Creada la migración `2026_06_24_400000_create_contracts_table.php` para almacenar registros de contratos de reservas.
+  - Creado el enum `ContractDocumentStatus` (draft, pending, signed, void).
+  - Creado el modelo `Contract` con casts y relaciones apropiadas.
+  - Añadida la relación `contract` (hasOne) en el modelo `Reservation`.
+- **Servicios e Integración**:
+  - Implementado `ContractService` con soporte para:
+    - `generateContract`: Genera un borrador del contrato PDF utilizando plantillas Blade, lo guarda de forma privada en el almacenamiento local y transiciona el estado de la reserva a `contract_pending` y su estado de contrato a `pending`.
+    - `signContract`: Registra la firma electrónica simple del cliente (nombre impreso, IP, User Agent, marca de tiempo y hash SHA-256 del documento), regenera el PDF con la sección de firma incrustada y transiciona el estado de la reserva a `contract_signed` y su estado de contrato a `signed`.
+    - `getContractPath`: Retorna la ruta del archivo físico de contrato para descargas.
+  - Creado el helper `MockPdf` y registrado un alias en `AppServiceProvider` para interceptar dinámicamente `Barryvdh\DomPDF\Facade\Pdf` cuando el paquete no está instalado (entornos offline/sandbox), permitiendo el uso normal de DomPDF una vez instalado.
+- **UI / Plantilla PDF**:
+  - Creada la vista `resources/views/pdf/contract.blade.php` conteniendo los términos legales, datos de cliente, datos de vehículo, sucursales y desglose completo de ITBIS 18% y totales.
+- **API Endpoints**:
+  - Creado `ContractController` para clientes: obtener detalles del contrato, firmar digitalmente y descargar PDF.
+  - Creado `AdminContractController` para administradores: generar borrador del contrato y descargar PDF.
+  - Registradas las rutas en `routes/api.php` con políticas y permisos correspondientes.
+
+### Archivos modificados
+- Migraciones: `2026_06_24_400000_create_contracts_table.php`
+- Modelos: `Contract`, `Reservation`
+- Enums: `ContractDocumentStatus`
+- Controladores: `ContractController`, `AdminContractController`
+- Servicios: `ContractService`, `AppServiceProvider`
+- Vistas/Helpers: `contract.blade.php`, `MockPdf.php`
+- Rutas/Peticiones/Recursos: `routes/api.php`, `SignContractRequest.php`, `ContractResource.php`
+- Tests: `ContractTest.php`
+- Documentación: `CHANGELOG.md`, `docs/13_TODO_ROADMAP.md`, `docs/15_AI_WORK_LOG.md`
+
+### Pruebas realizadas
+- Ejecutada la suite completa de pruebas, incluyendo los 5 nuevos tests de contratos:
+  ```bash
+  php artisan test
+  ```
+  **Resultado**: `80 passed (288 assertions)`.
+
+### Pendientes
+- Fase 11 — Entregas y Zonas de Envío.
+
+---
+
 <!-- Nuevas entradas se agregan abajo, sin borrar las anteriores. -->
 

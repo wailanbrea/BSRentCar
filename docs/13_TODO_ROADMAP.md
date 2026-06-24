@@ -88,11 +88,11 @@ Leyenda: `[ ]` pendiente · `[~]` en progreso · `[x]` hecho
 - [x] Vencimiento de autorizaciones (Scheduler).
 - [x] Tests.
 
-## Fase 10 — Contratos
-- [ ] Migración `contracts`.
-- [ ] `ContractService` (DomPDF/Browsershot) + plantilla.
-- [ ] Firma/aceptación con metadatos.
-- [ ] Tests.
+## Fase 10 — Contratos ✅ (2026-06-24)
+- [x] Migración `contracts`.
+- [x] `ContractService` (DomPDF/Browsershot) + plantilla.
+- [x] Firma/aceptación con metadatos.
+- [x] Tests.
 
 ## Fase 11 — Entregas
 - [ ] Migración `delivery_requests`.

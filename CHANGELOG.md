@@ -86,6 +86,16 @@ versionado [SemVer](https://semver.org/lang/es/).
   - Endpoints de administración `/api/v1/admin/deposits/{id}/capture` y `/api/v1/admin/deposits/{id}/release`.
   - Tests de depósito (6) -> suite total de 75 tests verdes.
 
+- **Fase 10 — Sistema de Contratos Digitales** (2026-06-24):
+  - Tabla `contracts` para almacenar los metadatos y rutas del archivo del contrato.
+  - Enums `ContractDocumentStatus` (draft, pending, signed, void) y relación `contract` en el modelo `Reservation`.
+  - `ContractService` para generación dinámica de PDFs usando plantillas Blade y firma electrónica simple.
+  - Soporte de firma simple que graba nombre impreso, IP, User Agent, marca de tiempo y hash SHA-256 del PDF del contrato.
+  - Intercepción de DomPDF mediante mock dinámico en `AppServiceProvider` para compatibilidad en entornos offline, manteniendo el uso del paquete real cuando está disponible.
+  - Endpoints cliente (`GET /customer/reservations/{reservation}/contract`, `POST /customer/reservations/{reservation}/contract/sign`, `GET /customer/reservations/{reservation}/contract/download`).
+  - Endpoints admin (`POST /admin/reservations/{reservation}/contract`, `GET /admin/reservations/{reservation}/contract/download`).
+  - Tests de contratos (5) -> suite total de 80 tests verdes.
+
 ### Pendiente
 - 2FA admin (con el panel web) y configurar Pint.
 - Verificación de documentos por admin y descarga con URL firmada.

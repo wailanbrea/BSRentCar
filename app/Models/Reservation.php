@@ -80,4 +80,9 @@ class Reservation extends Model
     {
         return $this->hasMany(DepositTransaction::class);
     }
+
+    public function contract(): \Illuminate\Database\Eloquent\Relations\HasOne
+    {
+        return $this->hasOne(Contract::class);
+    }
 }

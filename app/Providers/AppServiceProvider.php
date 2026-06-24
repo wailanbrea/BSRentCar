@@ -15,6 +15,10 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
+        if (!class_exists('Barryvdh\DomPDF\Facade\Pdf')) {
+            class_alias(\App\Helpers\MockPdf::class, 'Barryvdh\DomPDF\Facade\Pdf');
+        }
+
         // Named and class bindings for the gateways (Fase 7)
         $this->app->singleton(StripePaymentGateway::class, function ($app) {
             return new StripePaymentGateway(

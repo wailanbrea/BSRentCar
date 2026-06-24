@@ -11,6 +11,8 @@ use App\Http\Controllers\Api\StripePaymentController;
 use App\Http\Controllers\Api\VehicleController;
 use App\Http\Controllers\Api\WebhookController;
 use App\Http\Controllers\Api\PayPalPaymentController;
+use App\Http\Controllers\Api\ContractController;
+use App\Http\Controllers\Admin\AdminContractController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -43,6 +45,11 @@ Route::middleware(['auth:sanctum', 'role:customer'])->prefix('customer')->group(
     Route::get('reservations/{reservation}', [ReservationController::class, 'show']);
     Route::post('reservations/{reservation}/cancel', [ReservationController::class, 'cancel']);
 
+    // Contratos del cliente — Fase 10.
+    Route::get('reservations/{reservation}/contract', [ContractController::class, 'show']);
+    Route::post('reservations/{reservation}/contract/sign', [ContractController::class, 'sign']);
+    Route::get('reservations/{reservation}/contract/download', [ContractController::class, 'download']);
+
     // Billetera del cliente — Fase 8.
     Route::get('wallet', [\App\Http\Controllers\Api\WalletController::class, 'show']);
     Route::post('wallet/topup', [\App\Http\Controllers\Api\WalletController::class, 'topup']);
@@ -70,6 +77,10 @@ Route::middleware(['auth:sanctum'])->prefix('admin')->group(function () {
     Route::get('reservations/{reservation}', [AdminReservationController::class, 'show'])->middleware('permission:reservations.view');
     Route::post('reservations/{reservation}/mark-paid', [AdminReservationController::class, 'markPaid'])->middleware('permission:reservations.manage');
     Route::post('reservations/{reservation}/confirm', [AdminReservationController::class, 'confirm'])->middleware('permission:reservations.manage');
+
+    // Contratos (admin) — Fase 10.
+    Route::post('reservations/{reservation}/contract', [AdminContractController::class, 'generate'])->middleware('permission:reservations.manage');
+    Route::get('reservations/{reservation}/contract/download', [AdminContractController::class, 'download'])->middleware('permission:reservations.view');
 
     // Billetera (admin) — Fase 8.
     Route::post('customers/{id}/wallet/adjust', [\App\Http\Controllers\Admin\AdminWalletController::class, 'adjust'])->middleware('permission:wallet.manage');
