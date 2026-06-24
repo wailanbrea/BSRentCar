@@ -45,6 +45,37 @@ versionado [SemVer](https://semver.org/lang/es/).
   - CRUD admin de vehículos + fotos (`/api/v1/admin/vehicles`, permisos Spatie).
   - Tests: catálogo (9), admin (7), pricing (3). Suite total verde (37).
 
+- **Fase 5 — Reservas** (2026-06-24):
+  - Tablas `reservations` y `reservation_status_logs`; modelos y enums asociados.
+  - `ReservationStateMachine` para gestionar transiciones y logs de cambio de estados.
+  - `ReservationService` (crear con cotización + ITBIS 18%, cancelar, confirmar).
+  - Bloqueo pesimista anti-doble-reserva (`lockForUpdate` + revalidación atómica en `markAsPaid`).
+  - Endpoints cliente (`/customer/reservations`) y admin (`/admin/reservations`).
+  - Tests de reservas (8) -> suite total de 45 tests verdes.
+
+- **Fase 6 — Integración Stripe** (2026-06-24):
+  - Pasarela unificada `StripePaymentGateway` implementando `PaymentGatewayInterface`.
+  - Tablas `payments`, `payment_attempts`, `payment_methods` para auditoría y persistencia.
+  - Endpoints de creación y confirmación de intents Stripe.
+  - Webhooks de Stripe validados criptográficamente e idempotentes.
+  - Tests de Stripe (8) -> suite total de 53 tests verdes.
+
+- **Fase 7 — Integración PayPal** (2026-06-24):
+  - Pasarela unificada `PayPalPaymentGateway` vía API REST v2 (directamente con el cliente HTTP nativo de Laravel).
+  - Integración de webhooks PayPal con validación de firmas criptográficas.
+  - Endpoints de creación y confirmación de órdenes PayPal.
+  - Transición de la moneda del sistema a USD por defecto (`DEFAULT_CURRENCY=USD`).
+  - Tests de PayPal (8) -> suite total de 61 tests verdes.
+
+- **Fase 8 — Sistema de Billetera (Wallet)** (2026-06-24):
+  - Tablas `wallets` y `wallet_transactions` con histórico de movimientos auditables.
+  - `WalletService` con bloqueos pesimistas para concurrencia, crédito/débito y recálculo automático de balances.
+  - Billetera integrada como pasarela unificada (`WalletPaymentGateway`).
+  - Soporte para co-pagos y pagos parciales (ej. parte con balance de billetera y parte con Stripe/PayPal).
+  - Recargas de billetera utilizando Stripe/PayPal (`wallet_topup` type).
+  - Endpoints cliente (`GET /customer/wallet`, `POST /customer/wallet/topup`) y admin (`POST /admin/customers/{id}/wallet/adjust`).
+  - Tests de Wallet (8) -> suite total de 69 tests verdes.
+
 ### Pendiente
 - 2FA admin (con el panel web) y configurar Pint.
 - Verificación de documentos por admin y descarga con URL firmada.

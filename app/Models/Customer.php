@@ -55,6 +55,11 @@ class Customer extends Model
         return $this->hasMany(Reservation::class);
     }
 
+    public function wallet(): \Illuminate\Database\Eloquent\Relations\HasOne
+    {
+        return $this->hasOne(Wallet::class);
+    }
+
     /**
      * Edad cumplida a una fecha dada (por defecto hoy). Ver BR-C08.
      */

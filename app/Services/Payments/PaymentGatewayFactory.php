@@ -17,6 +17,7 @@ class PaymentGatewayFactory
         return match (strtolower($provider)) {
             'stripe' => app('payment.gateway.stripe'),
             'paypal' => app('payment.gateway.paypal'),
+            'wallet' => app('payment.gateway.wallet'),
             default  => throw new \InvalidArgumentException("Unsupported payment provider: {$provider}"),
         };
     }

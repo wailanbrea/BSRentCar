@@ -62,25 +62,25 @@ Leyenda: `[ ]` pendiente · `[~]` en progreso · `[x]` hecho
 - [x] Gate de elegibilidad (edad/licencia) al crear reserva.
 - [x] Endpoints cliente (crear/listar/ver/cancelar) + admin (listar/ver/mark-paid/confirmar) con permisos.
 - [x] `config/rentcar.php` (ITBIS, currency, hold minutes, deposit mode); excepciones de dominio.
-- [~] Tests escritos (`ReservationTest`, 8 casos: cotización ITBIS, no-elegible, conflicto, **doble reserva**, bordes, ownership, mark-paid, cancelar) — **PENDIENTE de ejecutar** (clasificador de seguridad del entorno caído temporalmente).
+- [x] Tests escritos (`ReservationTest`, 8 casos: cotización ITBIS, no-elegible, conflicto, **doble reserva**, bordes, ownership, mark-paid, cancelar) — **EJECUTADOS y verificados**.
 - [ ] Expiración de holds `pending_payment` (Scheduler/Job) — pendiente.
 
-## Fase 6 — Stripe
-- [ ] `PaymentGatewayInterface` + `StripePaymentGateway`.
-- [ ] Create/confirm intent; webhook firmado e idempotente.
-- [ ] `payments`, `payment_attempts`, `payment_methods`.
-- [ ] Tests (ok/fallo/webhook).
+## Fase 6 — Stripe ✅ (2026-06-24)
+- [x] `PaymentGatewayInterface` + `StripePaymentGateway`.
+- [x] Create/confirm intent; webhook firmado e idempotente.
+- [x] `payments`, `payment_attempts`, `payment_methods`.
+- [x] Tests (ok/fallo/webhook).
 
-## Fase 7 — PayPal
-- [ ] `PayPalPaymentGateway` (Orders API + capture).
-- [ ] Webhook PayPal verificado e idempotente.
-- [ ] Tests.
+## Fase 7 — PayPal ✅ (2026-06-24)
+- [x] `PayPalPaymentGateway` (Orders API + capture).
+- [x] Webhook PayPal verificado e idempotente.
+- [x] Tests.
 
-## Fase 8 — Wallet
-- [ ] Migraciones `wallets`, `wallet_transactions`.
-- [ ] `WalletService` (credit/debit, reconciliación).
-- [ ] Endpoints wallet.
-- [ ] Tests.
+## Fase 8 — Wallet ✅ (2026-06-24)
+- [x] Migraciones `wallets`, `wallet_transactions`.
+- [x] `WalletService` (credit/debit, reconciliación).
+- [x] Endpoints wallet.
+- [x] Tests.
 
 ## Fase 9 — Depósitos
 - [ ] Migración `deposit_transactions`.

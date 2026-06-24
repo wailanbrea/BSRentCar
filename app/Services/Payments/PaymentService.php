@@ -10,6 +10,7 @@ use App\Models\Payment;
 use App\Models\PaymentAttempt;
 use App\Models\Reservation;
 use App\Services\ReservationService;
+use App\Services\WalletService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
@@ -32,6 +33,7 @@ class PaymentService
     public function __construct(
         private readonly PaymentGatewayFactory $gatewayFactory,
         private readonly ReservationService $reservationService,
+        private readonly WalletService $walletService,
     ) {}
 
     // =========================================================================
@@ -56,25 +58,42 @@ class PaymentService
      * @throws \RuntimeException  If the gateway call fails.
      */
     public function initiatePayment(
-        Reservation $reservation,
+        ?Reservation $reservation,
         string $paymentType,
         string $provider,
         ?string $captureMethod = 'automatic',
+        ?string $customAmount = null,
+        ?int $customerId = null,
     ): array {
-        $type   = PaymentType::from($paymentType);
-        $amount = $this->resolveAmount($reservation, $type);
+        $type = PaymentType::from($paymentType);
 
-        return DB::transaction(function () use ($reservation, $type, $amount, $captureMethod, $provider) {
+        if ($reservation) {
+            $amount = $customAmount ?? $this->resolveRemainingAmount($reservation, $type);
+            $customerIdVal = $reservation->customer_id;
+            $currencyVal = $reservation->currency ?? 'USD';
+        } else {
+            if ($customAmount === null) {
+                throw new \InvalidArgumentException("Amount is required for top-ups.");
+            }
+            if ($customerId === null) {
+                throw new \InvalidArgumentException("Customer ID is required.");
+            }
+            $amount = $customAmount;
+            $customerIdVal = $customerId;
+            $currencyVal = 'USD';
+        }
+
+        return DB::transaction(function () use ($reservation, $type, $amount, $captureMethod, $provider, $customerIdVal, $currencyVal) {
             $idempotencyKey = (string) Str::uuid();
 
             // 1. Persist Payment record -----------------------------------------
             $payment = Payment::create([
-                'reservation_id'      => $reservation->id,
-                'customer_id'         => $reservation->customer_id,
+                'reservation_id'      => $reservation?->id,
+                'customer_id'         => $customerIdVal,
                 'provider'            => $provider,
                 'provider_payment_id' => null,  // filled after gateway call
                 'amount'              => $amount,
-                'currency'            => $reservation->currency ?? 'usd',
+                'currency'            => $currencyVal,
                 'status'              => PaymentStatus::Pending->value,
                 'payment_type'        => $type->value,
                 'idempotency_key'     => $idempotencyKey,
@@ -84,8 +103,8 @@ class PaymentService
             // 2. Persist PaymentAttempt -----------------------------------------
             $attempt = PaymentAttempt::create([
                 'payment_id'     => $payment->id,
-                'reservation_id' => $reservation->id,
-                'customer_id'    => $reservation->customer_id,
+                'reservation_id' => $reservation?->id,
+                'customer_id'    => $customerIdVal,
                 'provider'       => $provider,
                 'provider_reference' => null,
                 'amount'         => $amount,
@@ -101,8 +120,8 @@ class PaymentService
                 'currency'        => $payment->currency,
                 'capture_method'  => $captureMethod,
                 'metadata'        => [
-                    'reservation_id' => (string) $reservation->id,
-                    'customer_id'    => (string) $reservation->customer_id,
+                    'reservation_id' => $reservation ? (string) $reservation->id : null,
+                    'customer_id'    => (string) $customerIdVal,
                     'payment_type'   => $type->value,
                     'payment_id'     => (string) $payment->id,
                 ],
@@ -202,10 +221,24 @@ class PaymentService
             // Domain side-effect: mark reservation as paid (atomic availability re-check).
             $paymentType = $payment->payment_type;
 
-            if ($paymentType === PaymentType::Rent) {
+            if ($paymentType === PaymentType::Rent && $payment->reservation_id) {
                 $reservation = Reservation::find($payment->reservation_id);
-                if ($reservation) {
+                if ($reservation && $this->isFullyPaid($reservation, PaymentType::Rent)) {
                     $this->reservationService->markAsPaid($reservation);
+                }
+            }
+
+            if ($paymentType === PaymentType::WalletTopup) {
+                $customer = \App\Models\Customer::find($payment->customer_id);
+                if ($customer) {
+                    $wallet = $this->walletService->getWallet($customer);
+                    $this->walletService->credit(
+                        wallet: $wallet,
+                        amount: $payment->amount,
+                        type: 'credit',
+                        description: "Top-up via " . ucfirst($payment->provider),
+                        reference: $payment
+                    );
                 }
             }
         });
@@ -412,5 +445,30 @@ class PaymentService
         return PaymentAttempt::where('payment_id', $payment->id)
             ->latest()
             ->first();
+    }
+
+    public function resolveRemainingAmount(Reservation $reservation, PaymentType $type): string
+    {
+        $targetAmount = $this->resolveAmount($reservation, $type);
+
+        $paidAmountStr = '0.00';
+        foreach ($reservation->payments()->where('payment_type', $type->value)->where('status', PaymentStatus::Paid->value)->get() as $payment) {
+            $paidAmountStr = bcadd($paidAmountStr, $payment->amount, 2);
+        }
+
+        $remaining = bcsub($targetAmount, $paidAmountStr, 2);
+        return bccomp($remaining, '0.00', 2) > 0 ? $remaining : '0.00';
+    }
+
+    public function isFullyPaid(Reservation $reservation, PaymentType $type): bool
+    {
+        $targetAmount = $this->resolveAmount($reservation, $type);
+
+        $paidAmountStr = '0.00';
+        foreach ($reservation->payments()->where('payment_type', $type->value)->where('status', PaymentStatus::Paid->value)->get() as $payment) {
+            $paidAmountStr = bcadd($paidAmountStr, $payment->amount, 2);
+        }
+
+        return bccomp($paidAmountStr, $targetAmount, 2) >= 0;
     }
 }

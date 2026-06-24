@@ -324,5 +324,57 @@ Los tests están escritos. **Acción requerida:** ejecutar `php artisan migrate`
 
 ---
 
+## 2026-06-24 - Antigravity (Gemini Advanced Agent)
+
+### Tarea
+Fase 6 — Integración Stripe, Fase 7 — Integración PayPal y Fase 8 — Sistema de Billetera (Wallet).
+
+### Cambios realizados
+- **Fase 6 (Stripe)**:
+  - Instalado `stripe/stripe-php` e implementado `StripePaymentGateway` (cumpliendo `PaymentGatewayInterface`).
+  - Creadas tablas `payments`, `payment_attempts` y `payment_methods`.
+  - Creado `StripePaymentController` para creación de intents (Stripe Payment Intent) y confirmaciones.
+  - Implementado `StripeWebhookHandler` para recepción, verificación de firma e idempotencia de webhooks.
+  - Creada suite de pruebas en `StripePaymentTest.php` (8 casos de prueba mockeados).
+- **Fase 7 (PayPal)**:
+  - Implementado `PayPalPaymentGateway` consumiendo directamente la API Orders v2 REST de PayPal (Http client sin SDKs obsoletos).
+  - Creado `PayPalPaymentController` para gestionar creación de intents (orden de PayPal) y redirecciones.
+  - Implementado `PayPalWebhookHandler` para verificación criptográfica de firmas vía API de PayPal.
+  - Modificado el sistema para operar por defecto en dólares estadounidenses (`DEFAULT_CURRENCY=USD`).
+  - Corregido bug en `PaymentService::initiatePayment()` para mapeo de `clientSecret` desde el DTO.
+  - Creado `InvalidPayPalSignatureException` para control preciso de respuestas HTTP 400 vs 200 en webhooks.
+  - Creada suite de pruebas en `PayPalPaymentTest.php` (8 casos de prueba mockeados).
+- **Fase 8 (Wallet)**:
+  - Creadas tablas `wallets` y `wallet_transactions`.
+  - Creado `Wallet` y `WalletTransaction` con casts de decimales de precisión en dinero.
+  - Implementado `WalletService` con bloqueos pesimistas en DB (`lockForUpdate`), soporte para ajustes manuales y reconciliación de balances.
+  - Adaptada la billetera como pasarela de pago (`WalletPaymentGateway`) que implementa `PaymentGatewayInterface`.
+  - Refacturado `PaymentService` para soportar pagos parciales/co-pagos, recargas de billetera (`wallet_topup`), y validación de pago completo en reservas.
+  - Creados `WalletController` y `AdminWalletController` para gestionar transacciones de billetera y ajustes de balance.
+  - Creada suite de pruebas en `WalletTest.php` (8 casos de prueba).
+
+### Archivos modificados
+- Migraciones: `2026_06_24_193500_create_payments_tables.php`, `2026_06_24_200000_create_wallets_table.php`, `2026_06_24_200001_create_wallet_transactions_table.php`
+- Modelos: `Payment`, `PaymentAttempt`, `PaymentMethod`, `Customer`, `Wallet`, `WalletTransaction`
+- Enums: `PaymentStatus`, `PaymentType`, `PaymentAttemptStatus`, `PaymentProvider`
+- Controladores: `StripePaymentController`, `PayPalPaymentController`, `WalletController`, `AdminWalletController`, `WebhookController`
+- Servicios: `PaymentGatewayInterface`, `PaymentGatewayResponse`, `StripePaymentGateway`, `PayPalPaymentGateway`, `WalletPaymentGateway`, `PaymentGatewayFactory`, `PaymentService`, `WalletService`
+- Rutas: `routes/api.php`
+- Configuración: `config/rentcar.php`, `config/logging.php`
+- Tests: `StripePaymentTest.php`, `PayPalPaymentTest.php`, `WalletTest.php`
+- Documentos: `docs/13_TODO_ROADMAP.md`, `docs/15_AI_WORK_LOG.md`, `CHANGELOG.md`
+
+### Pruebas realizadas
+- Ejecución de la suite completa de pruebas:
+  ```bash
+  php artisan test
+  ```
+  **Resultado**: `69 passed (240 assertions)`. Suite verde y limpia, sin regresiones.
+
+### Pendientes
+- Fase 9 — Gestión de Depósitos (holds y autorizaciones).
+
+---
+
 <!-- Nuevas entradas se agregan abajo, sin borrar las anteriores. -->
 

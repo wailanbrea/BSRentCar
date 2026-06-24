@@ -42,6 +42,10 @@ Route::middleware(['auth:sanctum', 'role:customer'])->prefix('customer')->group(
     Route::post('reservations', [ReservationController::class, 'store']);
     Route::get('reservations/{reservation}', [ReservationController::class, 'show']);
     Route::post('reservations/{reservation}/cancel', [ReservationController::class, 'cancel']);
+
+    // Billetera del cliente — Fase 8.
+    Route::get('wallet', [\App\Http\Controllers\Api\WalletController::class, 'show']);
+    Route::post('wallet/topup', [\App\Http\Controllers\Api\WalletController::class, 'topup']);
 });
 
 // Catálogo público de vehículos — Fase 4.
@@ -66,6 +70,9 @@ Route::middleware(['auth:sanctum'])->prefix('admin')->group(function () {
     Route::get('reservations/{reservation}', [AdminReservationController::class, 'show'])->middleware('permission:reservations.view');
     Route::post('reservations/{reservation}/mark-paid', [AdminReservationController::class, 'markPaid'])->middleware('permission:reservations.manage');
     Route::post('reservations/{reservation}/confirm', [AdminReservationController::class, 'confirm'])->middleware('permission:reservations.manage');
+
+    // Billetera (admin) — Fase 8.
+    Route::post('customers/{id}/wallet/adjust', [\App\Http\Controllers\Admin\AdminWalletController::class, 'adjust'])->middleware('permission:wallet.manage');
 });
 
 // Pagos Stripe (cliente autenticado) — Fase 6.

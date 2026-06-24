@@ -36,6 +36,15 @@ class AppServiceProvider extends ServiceProvider
             return $app->make(PayPalPaymentGateway::class);
         });
 
+        $this->app->singleton(\App\Services\Payments\WalletPaymentGateway::class, function ($app) {
+            return new \App\Services\Payments\WalletPaymentGateway(
+                $app->make(\App\Services\WalletService::class)
+            );
+        });
+        $this->app->bind('payment.gateway.wallet', function ($app) {
+            return $app->make(\App\Services\Payments\WalletPaymentGateway::class);
+        });
+
         // Fallback default interface binding to Stripe gateway
         $this->app->bind(PaymentGatewayInterface::class, function ($app) {
             return $app->make(StripePaymentGateway::class);
