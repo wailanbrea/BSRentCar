@@ -467,5 +467,51 @@ Fase 10 — Sistema de Contratos Digitales (PDF y Firma Simple).
 
 ---
 
+## 2026-06-24 - Antigravity (Gemini Advanced Agent)
+
+### Tarea
+Fase 11 — Logística de Entregas y Distribución.
+
+### Cambios realizados
+- **Esquema de BD y Modelos**:
+  - Creadas las tablas `delivery_zones`, `delivery_pickup_points`, `delivery_time_windows` y `delivery_requests` mediante una sola migración.
+  - Creados los enums `DeliveryRequestType` (pickup_point, home, office, airport, hotel, custom) y `DeliveryRequestStatus` (requested, assigned, in_transit, delivered, returned, cancelled).
+  - Creados los modelos `DeliveryZone`, `DeliveryPickupPoint`, `DeliveryTimeWindow` y `DeliveryRequest` con sus respectivos casts y relaciones.
+  - Añadida la relación `deliveryRequests` (hasMany) en el modelo `Reservation`.
+- **Servicios e Integración**:
+  - Implementado `DeliveryService` con soporte para:
+    - Geofencing: Algoritmo de Ray-Casting (PnPoly) en PHP para determinar si un punto geográfico está dentro de un polígono de zona de entrega.
+    - Fórmula de Haversine: Cálculo trigonométrico de distancias en km para cotizar tarifas en base a excedente de distancia.
+    - `quoteDelivery`: Valida cobertura y calcula costo de entrega dinámica, y sugiere los 3 puntos comerciales de retiro activos más cercanos si el domicilio está fuera de cobertura.
+    - `createRequest`: Valida y crea solicitudes de pickup y devolución.
+    - `assignDriver`: Asigna conductores con el rol `driver` y actualiza estado a `assigned`.
+    - `updateStatus`: Administra estados logísticos y automatiza transiciones de estado de reservas en la máquina de estados cuando se entregan o retornan vehículos.
+- **API Endpoints**:
+  - Creado `DeliveryController` para clientes: obtener zonas activas, puntos comerciales (ordenables por distancia si recibe coordenadas), ventanas de tiempo y cotizaciones dinámicas.
+  - Creado `AdminDeliveryController` para administradores: CRUDs de zonas, puntos y ventanas horarias, y endpoints para asignación de choferes (`assign`) y actualización de estados logísticos (`status`).
+  - Registradas las rutas de admin y cliente en `routes/api.php` con permisos de seguridad (`deliveries.manage`).
+
+### Archivos modificados
+- Migraciones: `2026_06_24_500000_create_delivery_tables.php`
+- Modelos: `DeliveryZone`, `DeliveryPickupPoint`, `DeliveryTimeWindow`, `DeliveryRequest`, `Reservation`
+- Enums: `DeliveryRequestType`, `DeliveryRequestStatus`
+- Controladores: `DeliveryController`, `AdminDeliveryController`
+- Servicios: `DeliveryService`
+- Rutas/Peticiones/Recursos: `routes/api.php`, `QuoteDeliveryRequest.php`, `DeliveryZoneResource.php`, `DeliveryPickupPointResource.php`, `DeliveryTimeWindowResource.php`, `DeliveryRequestResource.php`
+- Tests: `DeliveryTest.php`
+- Documentación: `CHANGELOG.md`, `docs/13_TODO_ROADMAP.md`, `docs/15_AI_WORK_LOG.md`
+
+### Pruebas realizadas
+- Ejecutada la suite completa de pruebas, incluyendo los 4 nuevos tests de entregas:
+  ```bash
+  php artisan test
+  ```
+  **Resultado**: `84 passed (306 assertions)`.
+
+### Pendientes
+- Fase 12 — Inspecciones de Vehículos (Salida/Retorno, Fotos y Deducibles).
+
+---
+
 <!-- Nuevas entradas se agregan abajo, sin borrar las anteriores. -->
 

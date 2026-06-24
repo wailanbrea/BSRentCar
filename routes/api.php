@@ -13,6 +13,8 @@ use App\Http\Controllers\Api\WebhookController;
 use App\Http\Controllers\Api\PayPalPaymentController;
 use App\Http\Controllers\Api\ContractController;
 use App\Http\Controllers\Admin\AdminContractController;
+use App\Http\Controllers\Api\DeliveryController;
+use App\Http\Controllers\Admin\AdminDeliveryController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -60,6 +62,12 @@ Route::get('vehicles', [VehicleController::class, 'index']);
 Route::get('vehicles/{vehicle}', [VehicleController::class, 'show']);
 Route::get('vehicles/{vehicle}/availability', [VehicleController::class, 'availability']);
 
+// Logística y entregas públicas — Fase 11.
+Route::get('delivery/zones', [DeliveryController::class, 'indexZones']);
+Route::get('delivery/pickup-points', [DeliveryController::class, 'indexPickupPoints']);
+Route::get('delivery/time-windows', [DeliveryController::class, 'indexTimeWindows']);
+Route::post('delivery/quote', [DeliveryController::class, 'quote']);
+
 // Gestión administrativa de vehículos — Fase 4 (permisos Spatie).
 Route::middleware(['auth:sanctum'])->prefix('admin')->group(function () {
     Route::get('vehicles', [AdminVehicleController::class, 'index'])->middleware('permission:vehicles.view');
@@ -88,6 +96,25 @@ Route::middleware(['auth:sanctum'])->prefix('admin')->group(function () {
     // Depósitos de seguridad (admin) — Fase 9.
     Route::post('deposits/{id}/capture', [\App\Http\Controllers\Admin\AdminDepositController::class, 'capture'])->middleware('permission:deposits.manage');
     Route::post('deposits/{id}/release', [\App\Http\Controllers\Admin\AdminDepositController::class, 'release'])->middleware('permission:deposits.manage');
+
+    // Logística y entregas (admin) — Fase 11.
+    Route::get('delivery-zones', [AdminDeliveryController::class, 'indexZones'])->middleware('permission:deliveries.manage');
+    Route::post('delivery-zones', [AdminDeliveryController::class, 'storeZone'])->middleware('permission:deliveries.manage');
+    Route::put('delivery-zones/{zone}', [AdminDeliveryController::class, 'updateZone'])->middleware('permission:deliveries.manage');
+    Route::delete('delivery-zones/{zone}', [AdminDeliveryController::class, 'destroyZone'])->middleware('permission:deliveries.manage');
+
+    Route::get('delivery-pickup-points', [AdminDeliveryController::class, 'indexPickupPoints'])->middleware('permission:deliveries.manage');
+    Route::post('delivery-pickup-points', [AdminDeliveryController::class, 'storePickupPoint'])->middleware('permission:deliveries.manage');
+    Route::put('delivery-pickup-points/{point}', [AdminDeliveryController::class, 'updatePickupPoint'])->middleware('permission:deliveries.manage');
+    Route::delete('delivery-pickup-points/{point}', [AdminDeliveryController::class, 'destroyPickupPoint'])->middleware('permission:deliveries.manage');
+
+    Route::get('delivery-time-windows', [AdminDeliveryController::class, 'indexTimeWindows'])->middleware('permission:deliveries.manage');
+    Route::post('delivery-time-windows', [AdminDeliveryController::class, 'storeTimeWindow'])->middleware('permission:deliveries.manage');
+    Route::put('delivery-time-windows/{window}', [AdminDeliveryController::class, 'updateTimeWindow'])->middleware('permission:deliveries.manage');
+    Route::delete('delivery-time-windows/{window}', [AdminDeliveryController::class, 'destroyTimeWindow'])->middleware('permission:deliveries.manage');
+
+    Route::post('deliveries/{deliveryRequest}/assign', [AdminDeliveryController::class, 'assignDriver'])->middleware('permission:deliveries.manage');
+    Route::put('deliveries/{deliveryRequest}/status', [AdminDeliveryController::class, 'updateStatus'])->middleware('permission:deliveries.manage');
 });
 
 // Pagos Stripe (cliente autenticado) — Fase 6.

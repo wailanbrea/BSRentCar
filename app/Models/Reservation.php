@@ -85,4 +85,9 @@ class Reservation extends Model
     {
         return $this->hasOne(Contract::class);
     }
+
+    public function deliveryRequests(): HasMany
+    {
+        return $this->hasMany(DeliveryRequest::class);
+    }
 }

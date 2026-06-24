@@ -96,6 +96,16 @@ versionado [SemVer](https://semver.org/lang/es/).
   - Endpoints admin (`POST /admin/reservations/{reservation}/contract`, `GET /admin/reservations/{reservation}/contract/download`).
   - Tests de contratos (5) -> suite total de 80 tests verdes.
 
+- **Fase 11 — Logística de Entregas y Distribución** (2026-06-24):
+  - Tablas `delivery_zones`, `delivery_pickup_points`, `delivery_time_windows` y `delivery_requests` migradas.
+  - Enums `DeliveryRequestType` y `DeliveryRequestStatus`, junto con modelos relaciones.
+  - `DeliveryService` con motor de geofencing (algoritmo Ray-Casting en PHP) para cobertura en zonas poligonales GeoJSON y cotizador de distancias con Fórmula de Haversine.
+  - Generación de cotizaciones de entrega dinámicas y sugerencias automáticas de puntos comerciales de entrega (sucursales) cercanos en caso de estar fuera de cobertura.
+  - Integración en máquina de estados: al marcar una entrega logística como `delivered` o `returned`, la reservación se transiciona de forma automática al estado correspondiente.
+  - Endpoints cliente (`GET /delivery/zones`, `GET /delivery/pickup-points`, `GET /delivery/time-windows`, `POST /delivery/quote`).
+  - Endpoints admin (CRUDs de zonas, puntos y ventanas horarias, asignación de choferes `/admin/deliveries/{id}/assign` y cambios de estado `/admin/deliveries/{id}/status`).
+  - Tests de entregas (4) -> suite total de 84 tests verdes.
+
 ### Pendiente
 - 2FA admin (con el panel web) y configurar Pint.
 - Verificación de documentos por admin y descarga con URL firmada.

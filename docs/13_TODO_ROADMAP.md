@@ -94,10 +94,10 @@ Leyenda: `[ ]` pendiente · `[~]` en progreso · `[x]` hecho
 - [x] Firma/aceptación con metadatos.
 - [x] Tests.
 
-## Fase 11 — Entregas
-- [ ] Migración `delivery_requests`.
-- [ ] `DeliveryService` + asignación + estados.
-- [ ] Tests.
+## Fase 11 — Entregas ✅ (2026-06-24)
+- [x] Migración `delivery_requests`.
+- [x] `DeliveryService` + asignación + estados.
+- [x] Tests.
 
 ## Fase 12 — Inspecciones
 - [ ] Migraciones `vehicle_inspections`, `inspection_photos`.
