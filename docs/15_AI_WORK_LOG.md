@@ -513,5 +513,50 @@ Fase 11 — Logística de Entregas y Distribución.
 
 ---
 
+## [2026-06-24] Fase 12 — Inspecciones de Vehículos
+
+### Tareas realizadas
+- **Migraciones**: Diseñada y ejecutada la migración `2026_06_24_600000_create_inspections_table.php` para crear las tablas `vehicle_inspections` y `inspection_photos` con sus respectivas llaves foráneas, restricciones e índices.
+- **Enums**: Creados los enums `VehicleInspectionType` y `InspectionPhotoPosition`.
+- **Modelos**: Creados los modelos `VehicleInspection` y `InspectionPhoto` vinculando relaciones con `Reservation`, `Vehicle`, `User` (inspector) e integrando castings correspondientes.
+- **Servicios**: Creado `InspectionService` con:
+  - Validación estricta del estado de la reservación (lanza `\DomainException` mapeado a `409 Conflict` en caso de estado inválido).
+  - Almacenamiento privado de firmas digitales y fotos de inspección en disco `local` bajo el directorio `inspections/{id}/`.
+  - Sincronización en cadena mediante transiciones de estados con la máquina de estados `ReservationStateMachine`.
+- **Controladores y Recursos**:
+  - Implementado `AdminInspectionController` con los endpoints `/admin/reservations/{reservation}/inspections`, `/admin/inspections/{inspection}/photos` y `/admin/inspections/{inspection}`.
+  - Creados recursos API `VehicleInspectionResource` y `InspectionPhotoResource`.
+- **Rutas**: Registradas las rutas administrativas bajo el middleware de permiso `permission:inspections.manage`.
+- **Tests**: Escritos tests funcionales en `tests/Feature/Inspection/InspectionTest.php` cubriendo la creación de inspección inicial con carga de fotos y firmas, inspección final con transiciones completas de estados, denegación por estado inválido de la reserva, y validación de privacidad de storage de fotos.
+
+### Archivos creados/modificados
+- Creados:
+  - `database/migrations/2026_06_24_600000_create_inspections_table.php`
+  - `app/Enums/VehicleInspectionType.php`
+  - `app/Enums/InspectionPhotoPosition.php`
+  - `app/Models/VehicleInspection.php`
+  - `app/Models/InspectionPhoto.php`
+  - `app/Services/InspectionService.php`
+  - `app/Http/Controllers/Admin/AdminInspectionController.php`
+  - `app/Http/Resources/VehicleInspectionResource.php`
+  - `app/Http/Resources/InspectionPhotoResource.php`
+  - `tests/Feature/Inspection/InspectionTest.php`
+- Modificados:
+  - `app/Models/Reservation.php` (relación `inspections()`)
+  - `routes/api.php` (rutas registradas)
+  - `CHANGELOG.md`
+  - `docs/13_TODO_ROADMAP.md`
+  - `docs/15_AI_WORK_LOG.md`
+
+### Pruebas realizadas
+- Ejecutada la suite completa de pruebas, incluyendo los 4 nuevos tests de inspecciones:
+  ```bash
+  php artisan test
+  ```
+  **Resultado**: `88 passed (321 assertions)`.
+
+### Pendientes
+- Fase 13 — Calificaciones y Reseñas.
+
 <!-- Nuevas entradas se agregan abajo, sin borrar las anteriores. -->
 

@@ -90,4 +90,9 @@ class Reservation extends Model
     {
         return $this->hasMany(DeliveryRequest::class);
     }
+
+    public function inspections(): HasMany
+    {
+        return $this->hasMany(VehicleInspection::class);
+    }
 }

@@ -106,6 +106,14 @@ versionado [SemVer](https://semver.org/lang/es/).
   - Endpoints admin (CRUDs de zonas, puntos y ventanas horarias, asignación de choferes `/admin/deliveries/{id}/assign` y cambios de estado `/admin/deliveries/{id}/status`).
   - Tests de entregas (4) -> suite total de 84 tests verdes.
 
+- **Fase 12 — Inspecciones de Vehículos** (2026-06-24):
+  - Tablas `vehicle_inspections` y `inspection_photos` migradas con éxito.
+  - Enums `VehicleInspectionType` y `InspectionPhotoPosition` creados.
+  - Modelos `VehicleInspection` y `InspectionPhoto` con relaciones y casts de atributos.
+  - `InspectionService` con validación de estado elegible de reservación, carga y almacenamiento de firmas digitales e imágenes en storage privado local (`local`), y sincronización en cadena de estados con `ReservationStateMachine` (salida transiciona a `active`, retorno transiciona a `completed`).
+  - Endpoints de administración `/api/v1/admin/reservations/{reservation}/inspections`, `/api/v1/admin/inspections/{inspection}/photos` y `/api/v1/admin/inspections/{inspection}`.
+  - Tests de inspección (4) -> suite total de 88 tests verdes.
+
 ### Pendiente
 - 2FA admin (con el panel web) y configurar Pint.
 - Verificación de documentos por admin y descarga con URL firmada.

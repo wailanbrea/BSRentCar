@@ -15,6 +15,7 @@ use App\Http\Controllers\Api\ContractController;
 use App\Http\Controllers\Admin\AdminContractController;
 use App\Http\Controllers\Api\DeliveryController;
 use App\Http\Controllers\Admin\AdminDeliveryController;
+use App\Http\Controllers\Admin\AdminInspectionController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -115,6 +116,11 @@ Route::middleware(['auth:sanctum'])->prefix('admin')->group(function () {
 
     Route::post('deliveries/{deliveryRequest}/assign', [AdminDeliveryController::class, 'assignDriver'])->middleware('permission:deliveries.manage');
     Route::put('deliveries/{deliveryRequest}/status', [AdminDeliveryController::class, 'updateStatus'])->middleware('permission:deliveries.manage');
+
+    // Inspecciones de vehículos (admin) — Fase 12.
+    Route::post('reservations/{reservation}/inspections', [AdminInspectionController::class, 'store'])->middleware('permission:inspections.manage');
+    Route::post('inspections/{inspection}/photos', [AdminInspectionController::class, 'uploadPhoto'])->middleware('permission:inspections.manage');
+    Route::get('inspections/{inspection}', [AdminInspectionController::class, 'show'])->middleware('permission:inspections.manage');
 });
 
 // Pagos Stripe (cliente autenticado) — Fase 6.

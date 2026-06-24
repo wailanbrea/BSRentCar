@@ -99,11 +99,11 @@ Leyenda: `[ ]` pendiente · `[~]` en progreso · `[x]` hecho
 - [x] `DeliveryService` + asignación + estados.
 - [x] Tests.
 
-## Fase 12 — Inspecciones
-- [ ] Migraciones `vehicle_inspections`, `inspection_photos`.
-- [ ] `InspectionService` (inicial/final, fotos privadas).
-- [ ] Derivación de penalidades.
-- [ ] Tests.
+## Base 12 — Inspecciones ✅ (2026-06-24)
+- [x] Migraciones `vehicle_inspections`, `inspection_photos`.
+- [x] `InspectionService` (inicial/final, fotos privadas, sincronización de estados).
+- [x] Derivación de penalidades.
+- [x] Tests.
 
 ## Fase 13 — Calificaciones
 - [ ] Migración `reviews`.
