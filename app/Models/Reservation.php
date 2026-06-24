@@ -95,4 +95,9 @@ class Reservation extends Model
     {
         return $this->hasMany(VehicleInspection::class);
     }
+
+    public function review(): \Illuminate\Database\Eloquent\Relations\HasOne
+    {
+        return $this->hasOne(Review::class);
+    }
 }

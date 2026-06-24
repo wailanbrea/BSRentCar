@@ -114,6 +114,16 @@ versionado [SemVer](https://semver.org/lang/es/).
   - Endpoints de administración `/api/v1/admin/reservations/{reservation}/inspections`, `/api/v1/admin/inspections/{inspection}/photos` y `/api/v1/admin/inspections/{inspection}`.
   - Tests de inspección (4) -> suite total de 88 tests verdes.
 
+- **Fase 13 — Calificaciones (Reviews)** (2026-06-24):
+  - Tabla `reviews` migrada con éxito.
+  - Enum `ReviewStatus` creado.
+  - Modelo `Review` creado y relaciones configuradas en `Reservation`, `Vehicle` y `Customer`.
+  - `ReviewService` implementado para gestionar creación de calificaciones, moderación de visibilidad de reseñas y recálculo automático de promedio y conteo de ratings de vehículos.
+  - Endpoints públicos/clientes `/api/v1/reservations/{reservation}/review` y `/api/v1/vehicles/{vehicle}/reviews`.
+  - Endpoint de administración `/api/v1/admin/reviews/{review}/moderate`.
+  - Recursos API `ReviewResource` creados.
+  - Tests de calificaciones (5) -> suite total de 93 tests verdes.
+
 ### Pendiente
 - 2FA admin (con el panel web) y configurar Pint.
 - Verificación de documentos por admin y descarga con URL firmada.

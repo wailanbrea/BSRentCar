@@ -555,8 +555,56 @@ Fase 11 — Logística de Entregas y Distribución.
   ```
   **Resultado**: `88 passed (321 assertions)`.
 
+---
+
+## [2026-06-24] Fase 13 — Calificaciones (Reviews)
+
+### Tareas realizadas
+- **Migraciones**: Creada y ejecutada la migración `2026_06_24_700000_create_reviews_table.php` para la tabla `reviews`.
+- **Enums**: Creado el enum `ReviewStatus` (`visible`, `hidden`).
+- **Modelos**:
+  - Creado el modelo `Review` con castings y relaciones correspondientes.
+  - Modificados los modelos `Reservation` (relación `review()` 1-1), `Vehicle` y `Customer` (relaciones `reviews()` 1-N).
+  - Añadidos los atributos `rating_avg` y `rating_count` al array `$fillable` de `Vehicle` para permitir su modificación.
+- **Servicios**: Implementado `ReviewService` con:
+  - Creación de reseñas para reservaciones del propio usuario en estado `completed` que no se hayan calificado antes (lanza `\DomainException` con códigos 403 o 409 según el caso).
+  - Recálculo atómico de `rating_avg` y `rating_count` para el vehículo asociado sobre reseñas marcadas como `visible`.
+  - Moderación de visibilidad de reseñas de forma atómica.
+- **Controladores y Recursos**:
+  - Creado el controlador cliente/público `ReviewController` con endpoints para calificar reservaciones y listar reseñas de un vehículo.
+  - Creado el controlador administrativo `AdminReviewController` para moderar la visibilidad de las calificaciones.
+  - Creado el recurso `ReviewResource` para las respuestas JSON.
+- **Rutas**: Registradas las rutas correspondientes en `routes/api.php` bajo los middleware de autenticación, rol y permisos (`reviews.moderate`).
+- **Tests**: Escritos tests funcionales en `tests/Feature/Review/ReviewTest.php` cubriendo la creación, validación de dueños/estados, rechazo de duplicados, recálculos automáticos del promedio del vehículo tras moderaciones, y filtrado público de reseñas ocultas.
+
+### Archivos creados/modificados
+- Creados:
+  - `database/migrations/2026_06_24_700000_create_reviews_table.php`
+  - `app/Enums/ReviewStatus.php`
+  - `app/Models/Review.php`
+  - `app/Services/ReviewService.php`
+  - `app/Http/Controllers/Api/ReviewController.php`
+  - `app/Http/Controllers/Admin/AdminReviewController.php`
+  - `app/Http/Resources/ReviewResource.php`
+  - `tests/Feature/Review/ReviewTest.php`
+- Modificados:
+  - `app/Models/Reservation.php`
+  - `app/Models/Vehicle.php`
+  - `app/Models/Customer.php`
+  - `routes/api.php`
+  - `CHANGELOG.md`
+  - `docs/13_TODO_ROADMAP.md`
+  - `docs/15_AI_WORK_LOG.md`
+
+### Pruebas realizadas
+- Ejecutada la suite completa de pruebas, incluyendo los 5 nuevos tests de calificaciones:
+  ```bash
+  php artisan test
+  ```
+  **Resultado**: `93 passed (343 assertions)`.
+
 ### Pendientes
-- Fase 13 — Calificaciones y Reseñas.
+- Fase 14 — Reportes Financieros y de Flota.
 
 <!-- Nuevas entradas se agregan abajo, sin borrar las anteriores. -->
 

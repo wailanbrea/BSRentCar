@@ -16,6 +16,8 @@ use App\Http\Controllers\Admin\AdminContractController;
 use App\Http\Controllers\Api\DeliveryController;
 use App\Http\Controllers\Admin\AdminDeliveryController;
 use App\Http\Controllers\Admin\AdminInspectionController;
+use App\Http\Controllers\Api\ReviewController;
+use App\Http\Controllers\Admin\AdminReviewController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -58,10 +60,16 @@ Route::middleware(['auth:sanctum', 'role:customer'])->prefix('customer')->group(
     Route::post('wallet/topup', [\App\Http\Controllers\Api\WalletController::class, 'topup']);
 });
 
+// Reseñas del cliente (sin prefijo customer) — Fase 13.
+Route::middleware(['auth:sanctum', 'role:customer'])->group(function () {
+    Route::post('reservations/{reservation}/review', [ReviewController::class, 'store']);
+});
+
 // Catálogo público de vehículos — Fase 4.
 Route::get('vehicles', [VehicleController::class, 'index']);
 Route::get('vehicles/{vehicle}', [VehicleController::class, 'show']);
 Route::get('vehicles/{vehicle}/availability', [VehicleController::class, 'availability']);
+Route::get('vehicles/{vehicle}/reviews', [ReviewController::class, 'index']);
 
 // Logística y entregas públicas — Fase 11.
 Route::get('delivery/zones', [DeliveryController::class, 'indexZones']);
@@ -121,6 +129,9 @@ Route::middleware(['auth:sanctum'])->prefix('admin')->group(function () {
     Route::post('reservations/{reservation}/inspections', [AdminInspectionController::class, 'store'])->middleware('permission:inspections.manage');
     Route::post('inspections/{inspection}/photos', [AdminInspectionController::class, 'uploadPhoto'])->middleware('permission:inspections.manage');
     Route::get('inspections/{inspection}', [AdminInspectionController::class, 'show'])->middleware('permission:inspections.manage');
+
+    // Moderación de reseñas (admin) — Fase 13.
+    Route::post('reviews/{review}/moderate', [AdminReviewController::class, 'moderate'])->middleware('permission:reviews.moderate');
 });
 
 // Pagos Stripe (cliente autenticado) — Fase 6.

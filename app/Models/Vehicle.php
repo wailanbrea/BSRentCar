@@ -23,7 +23,7 @@ class Vehicle extends Model
     protected $fillable = [
         'name', 'brand', 'model', 'year', 'category', 'transmission', 'seats', 'doors',
         'fuel_type', 'color', 'plate', 'vin', 'daily_price', 'deposit_amount', 'currency',
-        'mileage', 'location_id', 'status', 'description', 'rules',
+        'mileage', 'location_id', 'status', 'description', 'rules', 'rating_avg', 'rating_count',
     ];
 
     protected function casts(): array
@@ -77,6 +77,11 @@ class Vehicle extends Model
     public function reservations(): HasMany
     {
         return $this->hasMany(Reservation::class);
+    }
+
+    public function reviews(): HasMany
+    {
+        return $this->hasMany(Review::class);
     }
 
     // Scopes de catálogo --------------------------------------------------
