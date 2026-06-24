@@ -73,6 +73,10 @@ Route::middleware(['auth:sanctum'])->prefix('admin')->group(function () {
 
     // Billetera (admin) — Fase 8.
     Route::post('customers/{id}/wallet/adjust', [\App\Http\Controllers\Admin\AdminWalletController::class, 'adjust'])->middleware('permission:wallet.manage');
+
+    // Depósitos de seguridad (admin) — Fase 9.
+    Route::post('deposits/{id}/capture', [\App\Http\Controllers\Admin\AdminDepositController::class, 'capture'])->middleware('permission:deposits.manage');
+    Route::post('deposits/{id}/release', [\App\Http\Controllers\Admin\AdminDepositController::class, 'release'])->middleware('permission:deposits.manage');
 });
 
 // Pagos Stripe (cliente autenticado) — Fase 6.

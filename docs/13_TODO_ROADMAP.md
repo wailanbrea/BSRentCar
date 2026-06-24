@@ -82,11 +82,11 @@ Leyenda: `[ ]` pendiente · `[~]` en progreso · `[x]` hecho
 - [x] Endpoints wallet.
 - [x] Tests.
 
-## Fase 9 — Depósitos
-- [ ] Migración `deposit_transactions`.
-- [ ] `DepositService` (hold/capture/release/partial).
-- [ ] Vencimiento de autorizaciones (Scheduler).
-- [ ] Tests.
+## Fase 9 — Depósitos ✅ (2026-06-24)
+- [x] Migración `deposit_transactions`.
+- [x] `DepositService` (hold/capture/release/partial).
+- [x] Vencimiento de autorizaciones (Scheduler).
+- [x] Tests.
 
 ## Fase 10 — Contratos
 - [ ] Migración `contracts`.

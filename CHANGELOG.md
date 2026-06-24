@@ -76,6 +76,16 @@ versionado [SemVer](https://semver.org/lang/es/).
   - Endpoints cliente (`GET /customer/wallet`, `POST /customer/wallet/topup`) y admin (`POST /admin/customers/{id}/wallet/adjust`).
   - Tests de Wallet (8) -> suite total de 69 tests verdes.
 
+- **Fase 9 — Retención y Captura de Depósitos de Seguridad** (2026-06-24):
+  - Tabla `deposit_transactions` con esquema e índices para auditoría de holds, captures y releases.
+  - Enums `DepositTransactionType` (hold, capture, release) y `DepositTransactionStatus` (pending, authorized, captured, released, expired, failed).
+  - `DepositService` para retención (`createHold`), captura (`capture`) y liberación (`release`).
+  - Integración de retenciones de depósito en Stripe (Payment Intent con `capture_method = manual`) y PayPal (Checkout Order con `intent = AUTHORIZE`).
+  - Sincronización del estado del depósito vía webhooks de pago (refactorización de `PaymentService::handlePaymentAuthorized()`).
+  - Comando programado `rentcar:check-expired-deposits` (diario) para identificar holds que expiran en menos de 24 horas.
+  - Endpoints de administración `/api/v1/admin/deposits/{id}/capture` y `/api/v1/admin/deposits/{id}/release`.
+  - Tests de depósito (6) -> suite total de 75 tests verdes.
+
 ### Pendiente
 - 2FA admin (con el panel web) y configurar Pint.
 - Verificación de documentos por admin y descarga con URL firmada.

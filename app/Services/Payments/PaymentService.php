@@ -307,6 +307,15 @@ class PaymentService
             'status'   => PaymentStatus::Authorized->value,
             'metadata' => array_merge($payment->metadata ?? [], ['webhook_authorized' => $raw]),
         ]);
+
+        // Mapear el depósito correspondiente (si existe) a estado 'authorized'
+        $deposit = \App\Models\DepositTransaction::where('provider_reference', $providerPaymentId)->first();
+        if ($deposit) {
+            $deposit->update([
+                'status' => \App\Enums\DepositTransactionStatus::Authorized,
+                'expires_at' => now()->addDays(7),
+            ]);
+        }
     }
 
     /**

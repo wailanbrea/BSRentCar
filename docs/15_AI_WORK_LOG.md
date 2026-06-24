@@ -376,5 +376,49 @@ Fase 6 — Integración Stripe, Fase 7 — Integración PayPal y Fase 8 — Sist
 
 ---
 
+## 2026-06-24 - Antigravity (Gemini Advanced Agent)
+
+### Tarea
+Fase 9 — Retención y Captura de Depósitos de Seguridad.
+
+### Cambios realizados
+- **Esquema de BD y Modelos**:
+  - Creada la migración `2026_06_24_300000_create_deposit_transactions_table.php` para almacenar registros históricos de retenciones, capturas y liberaciones.
+  - Creados los enums `DepositTransactionType` (hold, capture, release) y `DepositTransactionStatus` (pending, authorized, captured, released, expired, failed).
+  - Creado el modelo `DepositTransaction` con casts de tipo decimal para montos.
+  - Definida la relación `depositTransactions` en el modelo `Reservation`.
+- **Servicios e Integración**:
+  - Implementado `DepositService` para administrar la lógica de negocio de depósitos: `createHold` (configura intenciones con captura manual o autorización en pasarelas), `capture` (captura total o parcial de fondos autorizados), y `release` (libera la retención).
+  - Integradas las retenciones de depósito con Stripe (usando `capture_method => manual` en Payment Intents) y PayPal (usando `intent => AUTHORIZE` en Checkout Orders).
+  - Refacturado `PaymentService::handlePaymentAuthorized()` para actualizar de forma correspondiente el estado de los depósitos cuando se recibe confirmación mediante webhooks.
+- **Comando Programado**:
+  - Creado el comando de consola `CheckExpiredDeposits` (`rentcar:check-expired-deposits`) para notificar u organizar depósitos que expiren en menos de 24 horas.
+  - Registrado el comando en el scheduler diario dentro de `routes/console.php`.
+- **Endpoints de Administración**:
+  - Creado `AdminDepositController` con rutas seguras para capturar (`capture`) o liberar (`release`) depósitos.
+  - Registradas las rutas de admin en `routes/api.php`.
+
+### Archivos modificados
+- Migraciones: `2026_06_24_300000_create_deposit_transactions_table.php`
+- Modelos: `DepositTransaction`, `Reservation`
+- Enums: `DepositTransactionType`, `DepositTransactionStatus`
+- Controladores: `AdminDepositController`
+- Servicios: `DepositService`, `PaymentService`
+- Consola/Rutas: `CheckExpiredDeposits`, `routes/console.php`, `routes/api.php`
+- Tests: `DepositTest.php`
+- Documentación: `CHANGELOG.md`, `docs/13_TODO_ROADMAP.md`, `docs/15_AI_WORK_LOG.md`
+
+### Pruebas realizadas
+- Ejecutada la suite completa de pruebas, incluyendo los nuevos tests de depósitos:
+  ```bash
+  php artisan test
+  ```
+  **Resultado**: `75 passed (267 assertions)`.
+
+### Pendientes
+- Fase 10 — Contratos (generación de PDF y firma simple).
+
+---
+
 <!-- Nuevas entradas se agregan abajo, sin borrar las anteriores. -->
 
