@@ -88,6 +88,24 @@
                      dailyPrice: {{ (float) $vehicle->daily_price }},
                      depositAmount: {{ (float) ($vehicle->deposit_amount ?? 0) }},
                      currency: '{{ $vehicle->currency }}',
+                     getFutureDateTime(hours) {
+                         const d = new Date();
+                         d.setHours(d.getHours() + hours);
+                         const yyyy = d.getFullYear();
+                         const mm = String(d.getMonth() + 1).padStart(2, '0');
+                         const dd = String(d.getDate()).padStart(2, '0');
+                         const hh = String(d.getHours()).padStart(2, '0');
+                         const min = String(d.getMinutes()).padStart(2, '0');
+                         return `${yyyy}-${mm}-${dd}T${hh}:${min}`;
+                     },
+                     init() {
+                         if (!this.start) {
+                             this.start = this.getFutureDateTime(1);
+                         }
+                         if (!this.end) {
+                             this.end = this.getFutureDateTime(25);
+                         }
+                     },
                      get days() {
                          if (!this.start || !this.end) return 0;
                          const s = new Date(this.start);
@@ -126,11 +144,11 @@
                         <input type="hidden" name="vehicle_id" value="{{ $vehicle->id }}">
                         <div>
                             <label class="block text-xs text-slate-400 mb-1">Recogida</label>
-                            <input type="datetime-local" x-model="start" name="start_datetime" required class="w-full rounded-xl border-slate-200 text-sm px-4 py-2.5 focus:border-primary focus:ring-primary">
+                            <input type="datetime-local" x-model="start" :min="getFutureDateTime(0)" name="start_datetime" required class="w-full rounded-xl border-slate-200 text-sm px-4 py-2.5 focus:border-primary focus:ring-primary">
                         </div>
                         <div>
                             <label class="block text-xs text-slate-400 mb-1">Devolución</label>
-                            <input type="datetime-local" x-model="end" name="end_datetime" required class="w-full rounded-xl border-slate-200 text-sm px-4 py-2.5 focus:border-primary focus:ring-primary">
+                            <input type="datetime-local" x-model="end" :min="start || getFutureDateTime(0)" name="end_datetime" required class="w-full rounded-xl border-slate-200 text-sm px-4 py-2.5 focus:border-primary focus:ring-primary">
                         </div>
                         <div>
                             <label class="block text-xs text-slate-400 mb-1">Método de entrega</label>
@@ -177,11 +195,11 @@
                     <div class="mt-5 space-y-3">
                         <div>
                             <label class="block text-xs text-slate-400 mb-1">Recogida</label>
-                            <input type="datetime-local" x-model="start" class="w-full rounded-xl border-slate-200 text-sm px-4 py-2.5 focus:border-primary focus:ring-primary">
+                            <input type="datetime-local" x-model="start" :min="getFutureDateTime(0)" class="w-full rounded-xl border-slate-200 text-sm px-4 py-2.5 focus:border-primary focus:ring-primary">
                         </div>
                         <div>
                             <label class="block text-xs text-slate-400 mb-1">Devolución</label>
-                            <input type="datetime-local" x-model="end" class="w-full rounded-xl border-slate-200 text-sm px-4 py-2.5 focus:border-primary focus:ring-primary">
+                            <input type="datetime-local" x-model="end" :min="start || getFutureDateTime(0)" class="w-full rounded-xl border-slate-200 text-sm px-4 py-2.5 focus:border-primary focus:ring-primary">
                         </div>
                         <div>
                             <label class="block text-xs text-slate-400 mb-1">Método de entrega</label>
