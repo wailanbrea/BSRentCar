@@ -7,6 +7,19 @@ versionado [SemVer](https://semver.org/lang/es/).
 ## [Unreleased]
 
 ### Added
+- **Frontend público del cliente (Blade)** (2026-06-24): home replicando el mockup
+  (hero, ofertas, servicio premium, proceso, por qué elegirnos, CTA, testimonios),
+  catálogo con filtros (fecha/categoría/transmisión/precio/orden) y detalle de vehículo
+  (galería, características, reseñas, panel de precio). Rutas `/`, `/catalogo`, `/vehiculos/{id}`.
+- **Panel admin completado**: inspecciones, contratos (generar/descargar PDF), subida visual
+  de fotos de vehículos. Suite total: **118 verde**.
+- **Panel administrativo web (Blade)** (2026-06-24): auth de sesión (solo admin/staff),
+  layout con design system del mockup (sidebar navy + royal blue), dashboard con KPIs,
+  CRUD de vehículos, reservas (lista + detalle + acciones confirmar pago/confirmar/cancelar),
+  clientes (lista + detalle) y reportes. Tests web (10). Suite total: 110 verde.
+  Acceso: `/admin/login` con `admin@rentcar.test` / `password`.
+- **Expiración de holds de reservas** (2026-06-24): comando `rentcar:expire-reservation-holds`
+  + scheduler (cada 5 min) + `ReservationService::expireStaleHolds` + tests. Cierra Fase 5.
 - **Fase 0 — Documentación base** (2026-06-24):
   - Carpeta `docs/` con 21 documentos (`00`–`20`): índice maestro, contexto,
     reglas de negocio, stack, esquema de BD (29 tablas), módulos, contratos de
@@ -123,6 +136,12 @@ versionado [SemVer](https://semver.org/lang/es/).
   - Endpoint de administración `/api/v1/admin/reviews/{review}/moderate`.
   - Recursos API `ReviewResource` creados.
   - Tests de calificaciones (5) -> suite total de 93 tests verdes.
+
+- **Fase 14 — Reportes Financieros y de Flota** (2026-06-24):
+  - `ReportService` con KPIs agregados para ingresos por categoría, ocupación diaria de la flota, vehículos más rentables y estadísticas de cancelación de reservas.
+  - Controlador `AdminReportController` y endpoints administrativos `/api/v1/admin/reports/{revenue,occupancy,top-vehicles,stats}`.
+  - Rutas integradas y protegidas bajo el middleware de permiso `reports.view`.
+  - Tests funcionales en `tests/Feature/Report/ReportTest.php` (5) -> suite total de 98 tests verdes.
 
 ### Pendiente
 - 2FA admin (con el panel web) y configurar Pint.

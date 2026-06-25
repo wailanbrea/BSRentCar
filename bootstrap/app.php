@@ -18,7 +18,13 @@ return Application::configure(basePath: dirname(__DIR__))
             'role' => \Spatie\Permission\Middleware\RoleMiddleware::class,
             'permission' => \Spatie\Permission\Middleware\PermissionMiddleware::class,
             'role_or_permission' => \Spatie\Permission\Middleware\RoleOrPermissionMiddleware::class,
+            'admin' => \App\Http\Middleware\EnsureAdmin::class,
         ]);
+
+        // Invitados no autenticados: al login del panel si están bajo /admin, al login del cliente si no.
+        $middleware->redirectGuestsTo(fn ($request) => $request->is('admin', 'admin/*')
+            ? route('admin.login')
+            : route('login'));
     })
     ->withExceptions(function (Exceptions $exceptions) {
         //

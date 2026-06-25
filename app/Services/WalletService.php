@@ -22,7 +22,7 @@ class WalletService
         return Wallet::firstOrCreate(
             ['customer_id' => $customer->id],
             [
-                'currency' => 'USD',
+                'currency' => config('rentcar.currency', 'DOP'),
                 'balance'  => '0.00',
                 'status'   => 'active',
             ]

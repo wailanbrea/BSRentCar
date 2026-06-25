@@ -18,6 +18,7 @@ use App\Http\Controllers\Admin\AdminDeliveryController;
 use App\Http\Controllers\Admin\AdminInspectionController;
 use App\Http\Controllers\Api\ReviewController;
 use App\Http\Controllers\Admin\AdminReviewController;
+use App\Http\Controllers\Admin\AdminReportController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -132,6 +133,12 @@ Route::middleware(['auth:sanctum'])->prefix('admin')->group(function () {
 
     // Moderación de reseñas (admin) — Fase 13.
     Route::post('reviews/{review}/moderate', [AdminReviewController::class, 'moderate'])->middleware('permission:reviews.moderate');
+
+    // Reportes (admin) — Fase 14.
+    Route::get('reports/revenue', [AdminReportController::class, 'revenue'])->middleware('permission:reports.view');
+    Route::get('reports/occupancy', [AdminReportController::class, 'occupancy'])->middleware('permission:reports.view');
+    Route::get('reports/top-vehicles', [AdminReportController::class, 'topVehicles'])->middleware('permission:reports.view');
+    Route::get('reports/stats', [AdminReportController::class, 'stats'])->middleware('permission:reports.view');
 });
 
 // Pagos Stripe (cliente autenticado) — Fase 6.

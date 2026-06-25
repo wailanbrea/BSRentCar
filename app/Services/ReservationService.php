@@ -140,6 +140,34 @@ class ReservationService
         return $this->stateMachine->transition($reservation, ReservationStatus::Cancelled, $by, $reason ?? 'cancelled');
     }
 
+    /**
+     * Expira las reservas en pending_payment cuyo hold superó el tiempo configurado,
+     * liberando el cupo. Ver docs/10_RESERVATIONS_FLOW.md (BR-R10) y config/rentcar.php.
+     *
+     * @return int Cantidad de reservas expiradas.
+     */
+    public function expireStaleHolds(): int
+    {
+        $minutes = (int) config('rentcar.reservation_hold_minutes', 30);
+        $cutoff = now()->subMinutes($minutes);
+
+        $stale = Reservation::query()
+            ->where('reservation_status', ReservationStatus::PendingPayment->value)
+            ->where('created_at', '<', $cutoff)
+            ->get();
+
+        foreach ($stale as $reservation) {
+            $this->stateMachine->transition(
+                $reservation,
+                ReservationStatus::Expired,
+                null,
+                'hold expired',
+            );
+        }
+
+        return $stale->count();
+    }
+
     private function generateNumber(): string
     {
         do {

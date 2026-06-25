@@ -603,8 +603,216 @@ Fase 11 — Logística de Entregas y Distribución.
   ```
   **Resultado**: `93 passed (343 assertions)`.
 
+---
+
+## [2026-06-24] Fase 14 — Reportes Financieros y de Flota
+
+### Tareas realizadas
+- **Servicios**: Implementado `ReportService` para calcular agregados y KPIs operativos:
+  - Reporte de ingresos desglosado por precio base, cargos de entrega, cargos de seguro, impuestos y descuentos.
+  - Tasa de ocupación de la flota e individual de vehículos en porcentaje, resolviendo solapamientos de fechas y límites DST con precisión diaria.
+  - Top de vehículos ordenados por ingresos y cantidad de reservas.
+  - Estadísticas de reservas (totales, completadas, canceladas) y tasa de cancelación.
+- **Controladores**: Creado `AdminReportController` exponiendo los endpoints administrativos `/api/v1/admin/reports/{revenue,occupancy,top-vehicles,stats}`.
+- **Rutas**: Registradas las rutas administrativas bajo el middleware de permiso `reports.view`.
+- **Tests**: Escritos tests funcionales en `tests/Feature/Report/ReportTest.php` que verifican cada uno de los reportes con aserciones exactas y mocking de fechas con `Carbon::setTestNow()`.
+
+### Archivos creados/modificados
+- Creados:
+  - `app/Services/ReportService.php`
+  - `app/Http/Controllers/Admin/AdminReportController.php`
+  - `tests/Feature/Report/ReportTest.php`
+- Modificados:
+  - `routes/api.php`
+  - `CHANGELOG.md`
+  - `docs/13_TODO_ROADMAP.md`
+  - `docs/15_AI_WORK_LOG.md`
+
+### Pruebas realizadas
+- Ejecutada la suite completa de pruebas, incluyendo los 5 nuevos tests de reportes:
+  ```bash
+  php artisan test
+  ```
+  **Resultado**: `98 passed (366 assertions)`.
+
 ### Pendientes
-- Fase 14 — Reportes Financieros y de Flota.
+- Fase 15 — Seguridad Avanzada.
+
+## 2026-06-24 - Claude Code (Opus 4.8) — Revisión + expiración de holds
+
+### Tarea
+Revisar el avance hecho por otra IA (Fases 6–14) y arreglar/continuar.
+
+### Revisión (hallazgos)
+- Estado: **100 tests verde**, BD real migrada (25 migraciones), 77 rutas, sin advisories. Calidad alta.
+- Webhooks Stripe/PayPal con firma + idempotencia (guards por estado); dinero BCMath; integración atómica con `markAsPaid`. Correcto.
+- 🔴 **PayPal hardcodea `currency_code='USD'`** pero envía el monto en DOP (`PayPalPaymentGateway` líneas ~132/239). Como PayPal no soporta DOP, requiere conversión DOP→USD (decisión de negocio + tasa de cambio, ver `20_OPEN_QUESTIONS`). **Señalado, no parcheado** (necesita decisión).
+- 🟡 Wallet usa `'USD'` por defecto; debería ser DOP (moneda base). Señalado.
+
+### Cambios realizados
+- `ReservationService::expireStaleHolds()` — expira pending_payment vencidos (config `reservation_hold_minutes`), libera cupo (BR-R10).
+- `App\Console\Commands\ExpireReservationHolds` (`rentcar:expire-reservation-holds`) + Scheduler `everyFiveMinutes` en `routes/console.php`.
+- Tests `tests/Feature/Reservation/ExpireHoldsTest.php` (2).
+
+### Pruebas realizadas
+- `php artisan test` → **100 passed (372 asserts)**.
+- `php artisan migrate:status` → 25 migraciones aplicadas en MySQL.
+- `composer audit` → sin advisories.
+
+### Pendientes / Para decisión del usuario
+- **Decisión:** manejo de moneda DOP↔PayPal (PayPal no soporta DOP) — ¿cobrar PayPal en USD con conversión, o limitar PayPal? Y default de wallet a DOP.
+- Web UI (Blade) — todo el sistema es API; falta la interfaz (catálogo cliente + panel admin, docs 07/08).
+- Fase 15 (seguridad/hardening), 16 (CI), 17 (deploy).
+
+---
+
+## 2026-06-24 - Claude Code (Opus 4.8) — Panel administrativo web (Blade)
+
+### Tarea
+Construir la interfaz web del panel administrativo (Blade + Tailwind + Alpine) sobre la API existente. Dirección elegida por el usuario.
+
+### Cambios realizados
+- **Design system** en `resources/css/app.css` (@theme): colores `primary #2563EB`, `navy #0B1437`, etc. (mockup de referencia); fuente Poppins/Inter.
+- **Auth web (sesión, guard `web`)**: `Web\Admin\LoginController` (show/attempt/logout, solo admin/staff), middleware `EnsureAdmin` (alias `admin`), `redirectGuestsTo(admin.login)` en `bootstrap/app.php`.
+- **Layout** `admin/layouts/app.blade.php` (sidebar navy + topbar + dropdown), login `admin/auth/login.blade.php`, componente `x-admin.status-badge`.
+- **Dashboard** (`Web\Admin\DashboardController` + vista): KPIs (ingresos, reservas, ocupación, flota, clientes, pagos pendientes) desde `ReportService`, reservas recientes, top vehículos.
+- **Vehículos** (`Web\Admin\VehicleController` + index/create/edit/_form): CRUD completo reutilizando `StoreVehicleRequest`/`UpdateVehicleRequest`; vista de fotos.
+- **Reservas** (`Web\Admin\ReservationController` + index con filtros/show): detalle con desglose ITBIS, historial de estados y acciones (confirmar pago manual → `markAsPaid`, confirmar, cancelar).
+- **Clientes** (index + show: perfil, documentos, reservas) y **Reportes** (index con rango de fechas, KPIs, top vehículos).
+- Rutas en `routes/web.php` (`admin.*`), `/` redirige a `admin.login`.
+- Tests `tests/Feature/Admin/AdminPanelWebTest.php` (10): login/logout, acceso denegado a customer, dashboard, vehículos CRUD, reservas/clientes/reportes, mark-paid desde panel.
+
+### Archivos modificados
+`resources/css/app.css`, `resources/views/admin/**`, `resources/views/components/admin/status-badge.blade.php`, `app/Http/Controllers/Web/Admin/*`, `app/Http/Middleware/EnsureAdmin.php`, `bootstrap/app.php`, `routes/web.php`, `tests/Feature/Admin/AdminPanelWebTest.php`, `tests/Feature/ExampleTest.php`.
+
+### Pruebas realizadas
+- `php artisan test` → **110 passed (403 asserts)**.
+- `npm run build` → OK (CSS 58.8 KB con clases del panel).
+- Acceso: `admin@rentcar.test` / `password`. URL `/admin/login`.
+
+### Pendientes
+- Gestión visual de fotos de vehículos (subida) en el panel (hoy vía API).
+- Pantallas admin restantes (pagos/depósitos/entregas/inspecciones/contratos/calificaciones/config/auditoría) — modelos y API listos.
+- Web UI **del cliente** (catálogo/checkout) — pendiente.
+- Decisión moneda PayPal/DOP.
+
+---
+
+## 2026-06-24 - Claude Code (Opus 4.8) — "Arreglar lo que esté mal"
+
+### Tarea
+Revisión de defectos y corrección.
+
+### Hallazgos
+- Código limpio: sin restos de debug (`dd`/`dump`), sin TODO/FIXME, sin cadenas `->first()->` frágiles. 110 tests verde.
+- **Aclaración de moneda:** el `.env` tiene `DEFAULT_CURRENCY=USD` (cambiado por el usuario/otra IA). La moneda **base efectiva del proyecto es USD**, lo que explica que todo el subsistema de pagos use USD y resuelve el flag previo de "PayPal no soporta DOP" (con base USD, Stripe/PayPal son coherentes).
+- Inconsistencia menor restante: las migraciones/factory de **vehicles/reservations** ponen `currency` por defecto en `'DOP'`, que no coincide con la base USD. Recomendado alinear a `config('rentcar.currency')` (no bloqueante; los precios pueden mostrarse en DOP como feature multi-moneda futura).
+
+### Cambios realizados
+- **Moneda config-driven** (elimina `'USD'` hardcodeado): `WalletService::getWallet` y `PaymentService` (creación de pago y top-up) ahora usan `config('rentcar.currency', 'DOP')`. Respeta `DEFAULT_CURRENCY`.
+- **Endurecimiento del panel de reservas**: `Web\Admin\ReservationController` (markPaid/confirm/cancel) captura `InvalidArgumentException` (transición inválida) y devuelve error amigable en vez de 500.
+- Test `WalletTest::test_wallet_created_on_demand` ahora asierta `config('rentcar.currency')` (robusto ante el valor de `.env`).
+
+### Pruebas realizadas
+- `php artisan test` → **110 passed (403 asserts)**.
+
+### Resuelto (decisión del usuario: Opción A — todo USD)
+- Migración `2026_06_24_800000_align_currency_defaults_to_base`: defaults de `currency` en vehicles/reservations → USD.
+- `VehicleFactory` y vistas del panel ahora usan `config('rentcar.currency')`; eliminadas las etiquetas "DOP" hardcodeadas.
+- Verificado: `SHOW COLUMNS` → currency default USD en ambas tablas; `php artisan test` → 110 verde.
+- Decisión registrada en `14_DECISIONS_LOG.md`. Moneda del proyecto: **USD única** (multi-moneda = futuro).
+
+---
+
+## 2026-06-24 - Claude Code (Opus 4.8) — Más pantallas del panel admin
+
+### Tarea
+Completar pantallas admin: Pagos, Depósitos, Entregas, Calificaciones.
+
+### Cambios realizados
+- `Web\Admin\PaymentController` (lista de pagos), `DepositController` (lista de depósitos), `ReviewController` (lista + moderar visible/oculto vía `ReviewService::updateReviewVisibility`), `DeliveryController` (lista + asignar conductor vía `DeliveryService::assignDriver` + cambiar estado vía `updateStatus`).
+- Vistas `admin/{payments,deposits,deliveries,reviews}/index.blade.php`.
+- Menú lateral ampliado (Pagos, Depósitos, Entregas, Calificaciones); rutas en `routes/web.php`.
+- Tests añadidos a `AdminPanelWebTest` (ver 4 índices + moderar reseña).
+
+### Pruebas realizadas
+- `php artisan test` → **112 passed (409 asserts)**.
+- `npm run build` → OK.
+
+### Pendientes
+- Inspecciones y Contratos (vistas admin) — modelos/API listos.
+- Subida visual de fotos de vehículos.
+- Configuración y Auditoría: requieren crear tablas `settings` y `audit_logs` (no existen).
+- Web UI del cliente (catálogo/checkout).
+
+---
+
+## 2026-06-24 - Claude Code (Opus 4.8) — Cierre panel admin + Frontend cliente
+
+### Tarea
+Completar panel admin (inspecciones, contratos, fotos) y construir el frontend público del cliente con el mockup de referencia.
+
+### Cambios realizados
+**Admin (cierre):**
+- `Web\Admin\ContractController` (lista + generar desde reserva + descargar PDF vía `ContractService`), `InspectionController` (lista), botón "Generar contrato" en detalle de reserva.
+- Subida visual de fotos en `Web\Admin\VehicleController` (uploadImage/setPrimaryImage/deleteImage) + UI en editar vehículo. Nav ampliado (Inspecciones, Contratos).
+
+**Cliente (nuevo):**
+- `Web\Client\HomeController` (deals destacados) y `CatalogController` (filtros + detalle, reutiliza `AvailabilityService`/`PricingService`).
+- `layouts/public.blade.php` (header + footer del mockup), `x-client.vehicle-card`.
+- Vistas `client/home` (hero gradiente, ofertas, servicio premium navy, proceso, por qué, CTA, testimonios), `client/catalog/index` (filtros + grid), `client/catalog/show` (galería, características, reseñas, precio).
+- Rutas públicas: `/` (home), `/catalogo`, `/vehiculos/{vehicle}`. `/` ya NO redirige al admin.
+- Design tokens del mockup ya en `app.css` (primary/navy/brandslate, Poppins/Inter).
+
+### Correcciones
+- Quitado `Vehicle::reviews()` duplicado (ya existía).
+- `ExampleTest` ahora usa `RefreshDatabase` y valida la home.
+
+### Pruebas realizadas
+- `php artisan test` → **118 passed (424 asserts)**.
+- `npm run build` → OK.
+- Tests nuevos: `AdminPanelWebTest` (contratos/inspecciones/foto, 14 total), `Client\ClientSiteTest` (home/catálogo/filtro/detalle, 4).
+
+### Pendientes
+- Cliente: login/registro web, checkout/booking, mis reservas, wallet, métodos de pago.
+- Admin: Configuración y Auditoría (requieren tablas `settings`/`audit_logs`).
+- Decisión: imágenes reales de la flota (hoy placeholders cuando no hay foto).
+
+---
+
+## 2026-06-24 - Claude Code (Opus 4.8) — Flujo transaccional cliente + servidor de prueba
+
+### Tarea
+Construir el flujo del cliente (auth, booking, mi cuenta) y levantar el servidor para pruebas.
+
+### Cambios realizados
+- `Web\Client\AuthController` (registro/login/logout web, redirige admin→panel, cliente→cuenta), `AccountController` (dashboard, reservas+detalle, wallet, perfil+documentos), `BookingController` (crear reserva con gate de elegibilidad; mensajes amigables).
+- Vistas `client/auth/{login,register}`, `client/account/{dashboard,reservations,reservation,wallet,profile}` + partial de nav; header público auth-aware; formulario de reserva en el detalle del vehículo.
+- `redirectGuestsTo` ahora es path-aware (admin→admin.login, resto→login).
+- `DatabaseSeeder`: cliente demo (`cliente@rentcar.test`, licencia aprobada), driver demo, 8 vehículos demo + sucursal Santo Domingo.
+- Rutas cliente en `routes/web.php`.
+
+### Pruebas realizadas
+- `php artisan test` → **124 passed (447 asserts)** (nuevo `Client\ClientAccountTest`, 6).
+- `php artisan db:seed` en BD real → admin/cliente/driver + 8 vehículos.
+- `php artisan serve` (background) verificado vía HTTP: `/`, `/catalogo`, `/vehiculos/{id}`, `/login`, `/registro`, `/admin/login` → todos 200.
+
+### Accesos de prueba (servidor en http://127.0.0.1:8000)
+- Cliente: `cliente@rentcar.test` / `password` (puede reservar; licencia aprobada).
+- Admin: `admin@rentcar.test` / `password` (`/admin/login`).
+- Driver: `driver@rentcar.test` / `password`.
+
+### Pendientes
+- Pago real (Stripe Elements/PayPal) en el checkout — requiere credenciales sandbox.
+- Configuración/Auditoría admin (faltan tablas).
+
+---
 
 <!-- Nuevas entradas se agregan abajo, sin borrar las anteriores. -->
+
+
+
+
+
+
 

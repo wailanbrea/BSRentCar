@@ -10,3 +10,4 @@ Artisan::command('inspire', function () {
 use Illuminate\Support\Facades\Schedule;
 
 Schedule::command('rentcar:check-expired-deposits')->daily();
+Schedule::command('rentcar:expire-reservation-holds')->everyFiveMinutes();

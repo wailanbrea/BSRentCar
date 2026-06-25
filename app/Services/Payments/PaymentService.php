@@ -70,7 +70,7 @@ class PaymentService
         if ($reservation) {
             $amount = $customAmount ?? $this->resolveRemainingAmount($reservation, $type);
             $customerIdVal = $reservation->customer_id;
-            $currencyVal = $reservation->currency ?? 'USD';
+            $currencyVal = $reservation->currency ?? config('rentcar.currency', 'DOP');
         } else {
             if ($customAmount === null) {
                 throw new \InvalidArgumentException("Amount is required for top-ups.");
@@ -80,7 +80,7 @@ class PaymentService
             }
             $amount = $customAmount;
             $customerIdVal = $customerId;
-            $currencyVal = 'USD';
+            $currencyVal = config('rentcar.currency', 'DOP');
         }
 
         return DB::transaction(function () use ($reservation, $type, $amount, $captureMethod, $provider, $customerIdVal, $currencyVal) {

@@ -63,7 +63,7 @@ Leyenda: `[ ]` pendiente · `[~]` en progreso · `[x]` hecho
 - [x] Endpoints cliente (crear/listar/ver/cancelar) + admin (listar/ver/mark-paid/confirmar) con permisos.
 - [x] `config/rentcar.php` (ITBIS, currency, hold minutes, deposit mode); excepciones de dominio.
 - [x] Tests escritos (`ReservationTest`, 8 casos: cotización ITBIS, no-elegible, conflicto, **doble reserva**, bordes, ownership, mark-paid, cancelar) — **EJECUTADOS y verificados**.
-- [ ] Expiración de holds `pending_payment` (Scheduler/Job) — pendiente.
+- [x] Expiración de holds `pending_payment` (`rentcar:expire-reservation-holds` + Scheduler everyFiveMinutes + `ReservationService::expireStaleHolds` + tests).
 
 ## Fase 6 — Stripe ✅ (2026-06-24)
 - [x] `PaymentGatewayInterface` + `StripePaymentGateway`.
@@ -105,16 +105,16 @@ Leyenda: `[ ]` pendiente · `[~]` en progreso · `[x]` hecho
 - [x] Derivación de penalidades.
 - [x] Tests.
 
-## Fase 13 — Calificaciones
-- [ ] Migración `reviews`.
-- [ ] `ReviewService` + recálculo de rating.
-- [ ] Endpoints + autorización.
-- [ ] Tests.
+## Fase 13 — Calificaciones ✅ (2026-06-24)
+- [x] Migración `reviews`.
+- [x] `ReviewService` + recálculo de rating.
+- [x] Endpoints + autorización (solo reservas completadas; moderación admin).
+- [x] Tests (5).
 
-## Fase 14 — Reportes
-- [ ] `ReportService` (ingresos, ocupación, top vehículos).
-- [ ] Pantallas admin + export.
-- [ ] Tests.
+## Fase 14 — Reportes ✅ (2026-06-24)
+- [x] `ReportService` (ingresos, ocupación, top vehículos, stats de reservas).
+- [x] Endpoints admin (export pendiente para web UI).
+- [x] Tests (5).
 
 ## Fase 15 — Seguridad
 - [ ] Policies completas, rate limiting, URLs firmadas.
@@ -131,6 +131,33 @@ Leyenda: `[ ]` pendiente · `[~]` en progreso · `[x]` hecho
 - [ ] Webhooks en producción.
 - [ ] Backups automatizados.
 - [ ] Seguir `18_DEPLOYMENT_GUIDE.md`.
+
+## Web UI — Panel administrativo (Blade) 🟡 en progreso (2026-06-24)
+- [x] Auth web de sesión (login/logout, solo admin/staff) + middleware `EnsureAdmin`.
+- [x] Design system en Tailwind (colores del mockup), layout (sidebar navy + topbar), `x-admin.status-badge`.
+- [x] Dashboard con KPIs (ReportService) + reservas recientes + top vehículos.
+- [x] Vehículos: CRUD completo (index/create/edit).
+- [x] Reservas: lista con filtros + detalle con acciones (confirmar pago, confirmar, cancelar).
+- [x] Clientes: lista + detalle (perfil/documentos/reservas). Reportes: rango de fechas + KPIs.
+- [x] Pagos (lista), Depósitos (lista), Entregas (lista + asignar conductor + cambiar estado), Calificaciones (lista + moderar mostrar/ocultar).
+- [x] Inspecciones (lista), Contratos (lista + generar desde reserva + descargar PDF).
+- [x] Subida visual de fotos de vehículos (subir / marcar principal / eliminar).
+- [x] Tests web (14) — suite total **118 verde**.
+- [ ] Configuración y Auditoría — requieren crear tablas `settings`/`audit_logs` (no existen aún).
+
+## Web UI — Cliente (Blade) 🟡 en progreso (2026-06-24)
+- [x] Layout público (header + footer del mockup) y componente `x-client.vehicle-card`.
+- [x] Home replicando el mockup: hero con gradiente, "Explora ofertas" (grid), servicio premium (navy), proceso de reserva, por qué elegirnos, CTA, testimonios.
+- [x] Catálogo con filtros (fecha/categoría/transmisión/precio/orden) + grid + paginación.
+- [x] Detalle de vehículo (galería, características, reseñas, panel de precio).
+- [x] Tests cliente (4: home, catálogo, filtro, detalle).
+- [x] Login/registro del cliente (web) + booking (crear reserva con gate de elegibilidad) + Mi cuenta (dashboard, mis reservas + detalle, wallet, perfil + subida de documentos).
+- [x] Tests cliente cuenta (6) — suite total **124 verde**.
+- [x] Seeder demo (admin/cliente/driver + 8 vehículos) y servidor de prueba (`php artisan serve`).
+- [ ] Pago real en checkout (Stripe Elements / PayPal buttons) — requiere credenciales sandbox; botón "Pagar" deshabilitado por ahora.
+
+## Web UI — Cliente (Blade) — pendiente
+- [ ] Home, catálogo con filtros, detalle de vehículo, login/registro, checkout, mis reservas, wallet (docs/07).
 
 ## Fase 18 — App móvil futura
 - [ ] Versionar y estabilizar API.

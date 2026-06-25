@@ -31,7 +31,7 @@ class VehicleFactory extends Factory
             'plate' => strtoupper(fake()->unique()->bothify('?##-###')),
             'daily_price' => fake()->randomElement(['2500.00', '3000.00', '4500.00', '6000.00']),
             'deposit_amount' => '5000.00',
-            'currency' => 'DOP',
+            'currency' => config('rentcar.currency', 'USD'),
             'mileage' => fake()->numberBetween(0, 80000),
             'status' => VehicleStatus::Available->value,
             'description' => fake()->sentence(),

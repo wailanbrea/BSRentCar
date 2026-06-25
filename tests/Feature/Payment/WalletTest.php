@@ -89,7 +89,7 @@ class WalletTest extends TestCase
         $this->assertDatabaseHas('wallets', [
             'customer_id' => $customer->id,
             'balance' => '0.00',
-            'currency' => 'USD',
+            'currency' => config('rentcar.currency'),
             'status' => 'active',
         ]);
         $this->assertEquals('0.00', $wallet->balance);

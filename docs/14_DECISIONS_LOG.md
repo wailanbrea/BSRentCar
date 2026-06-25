@@ -303,4 +303,27 @@ Claude Code (Opus 4.8)
 
 ---
 
+## 2026-06-24 - Moneda base única: USD
+
+### Decisión
+La moneda base del proyecto es **USD** (configurada en `.env` `DEFAULT_CURRENCY=USD` y `config/rentcar.php`). Se descarta el modelo multi-moneda DOP/USD para el MVP. Toda la plataforma (vehículos, reservas, wallet, pagos) opera en USD.
+
+### Motivo
+Stripe y PayPal liquidan en USD y no soportan DOP de forma fiable; en el turismo de RD es habitual cotizar/cobrar en USD. El `.env` ya estaba configurado en USD. Mantener una sola moneda evita conversiones e inconsistencias.
+
+### Impacto
+- Migración `2026_06_24_800000_align_currency_defaults_to_base`: default de `currency` de `vehicles` y `reservations` → USD.
+- `VehicleFactory`, `WalletService`, `PaymentService` usan `config('rentcar.currency')`.
+- Vistas del panel (dashboard, reportes, formulario de vehículos) muestran la moneda desde config (sin "DOP" hardcodeado).
+- ITBIS 18% se mantiene (impuesto RD, independiente de la moneda).
+- Reabrir multi-moneda (mostrar DOP, cobrar USD) queda como mejora futura.
+
+### Archivos afectados
+`config/rentcar.php`, `.env`, migración de alineación, `database/factories/VehicleFactory.php`, `app/Services/WalletService.php`, `app/Services/Payments/PaymentService.php`, vistas `admin/*`.
+
+### IA / Desarrollador
+Claude Code (Opus 4.8) — confirmado por el usuario (Opción A).
+
+---
+
 <!-- Próximas decisiones se agregan abajo, sin borrar las anteriores. -->

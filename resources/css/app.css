@@ -7,6 +7,13 @@
 @source "../**/*.vue";
 
 @theme {
-    --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
+    --font-sans: 'Poppins', 'Inter', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
         'Segoe UI Symbol', 'Noto Color Emoji';
+
+    /* Design system RentCar (basado en el mockup de referencia) — ver docs/07_FRONTEND_GUIDE.md */
+    --color-primary: #2563eb;
+    --color-primary-dark: #1d4ed8;
+    --color-navy: #0b1437;
+    --color-navy-2: #0a1a3f;
+    --color-brandslate: #64748b;
 }
