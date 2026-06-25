@@ -144,4 +144,14 @@ class ClientAccountTest extends TestCase
         $response->assertSee($user->name);
         $response->assertSee($user->email);
     }
+
+    public function test_navigation_shows_username_instead_of_my_account_when_logged_in(): void
+    {
+        $user = $this->eligibleCustomerUser();
+
+        $response = $this->actingAs($user)->get('/');
+        $response->assertOk();
+        $response->assertSee($user->name);
+        $response->assertDontSee('Mi cuenta');
+    }
 }

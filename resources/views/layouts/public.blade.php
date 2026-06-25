@@ -23,7 +23,7 @@
         </nav>
         <div class="hidden md:flex items-center gap-3">
             @auth
-                <a href="{{ route('account.dashboard') }}" class="text-white/90 text-sm hover:text-white">Mi cuenta</a>
+                <a href="{{ route('account.dashboard') }}" class="text-white/90 text-sm hover:text-white font-medium">{{ auth()->user()->name }}</a>
                 <form method="POST" action="{{ route('logout') }}">@csrf
                     <button class="rounded-full border border-white/40 text-white text-sm px-5 py-2 hover:bg-white/10">Salir</button>
                 </form>
@@ -39,7 +39,15 @@
     <div x-show="menu" x-cloak class="md:hidden bg-navy/95 backdrop-blur px-6 py-4 space-y-2 text-white/90 text-sm">
         <a href="{{ route('home') }}" class="block py-1">Inicio</a>
         <a href="{{ route('catalog') }}" class="block py-1">Vehículos</a>
-        <a href="{{ route('catalog') }}" class="block py-1">Reservar ahora</a>
+        @auth
+            <a href="{{ route('account.dashboard') }}" class="block py-1 font-medium">{{ auth()->user()->name }}</a>
+            <form method="POST" action="{{ route('logout') }}" class="block py-1">@csrf
+                <button type="submit" class="text-left w-full text-white/90 hover:text-white">Salir</button>
+            </form>
+        @else
+            <a href="{{ route('login') }}" class="block py-1">Entrar</a>
+            <a href="{{ route('register') }}" class="block py-1">Crear cuenta</a>
+        @endauth
     </div>
 </header>
 
