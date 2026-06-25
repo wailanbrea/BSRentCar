@@ -81,9 +81,10 @@
         <div>
             <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-6 sticky top-6"
                  x-data="{
-                     start: '',
-                     end: '',
-                     pickupType: 'office',
+                     start: '{{ old('start_datetime') }}',
+                     end: '{{ old('end_datetime') }}',
+                     pickupType: '{{ old('pickup_type', 'office') }}',
+                     pickupAddress: '{{ old('pickup_address') }}',
                      dailyPrice: {{ (float) $vehicle->daily_price }},
                      depositAmount: {{ (float) ($vehicle->deposit_amount ?? 0) }},
                      currency: '{{ $vehicle->currency }}',
@@ -110,8 +111,14 @@
                 @if ($vehicle->rating_count > 0)
                     <p class="text-amber-500 text-sm mt-1">★ {{ number_format((float) $vehicle->rating_avg, 1) }} ({{ $vehicle->rating_count }})</p>
                 @endif
-                @if ($errors->has('booking'))
-                    <div class="mt-4 rounded-xl bg-red-50 border border-red-200 text-red-600 px-3 py-2 text-sm">{{ $errors->first('booking') }}</div>
+                @if ($errors->any())
+                    <div class="mt-4 rounded-xl bg-red-50 border border-red-200 text-red-600 p-3 text-sm">
+                        <ul class="list-disc pl-4 space-y-1">
+                            @foreach ($errors->all() as $error)
+                                <li>{{ $error }}</li>
+                            @endforeach
+                        </ul>
+                    </div>
                 @endif
                 @auth
                     <form method="POST" action="{{ route('booking.store') }}" class="mt-5 space-y-3">
@@ -136,7 +143,7 @@
                         </div>
                         <div x-show="pickupType !== 'office'" x-cloak class="mt-2 transition-all">
                             <label class="block text-xs text-slate-400 mb-1">Dirección de entrega *</label>
-                            <input type="text" name="pickup_address" :required="pickupType !== 'office'" placeholder="Calle, número, apto, etc." class="w-full rounded-xl border-slate-200 text-sm px-4 py-2.5 focus:border-primary focus:ring-primary">
+                            <input type="text" x-model="pickupAddress" name="pickup_address" :required="pickupType !== 'office'" placeholder="Calle, número, apto, etc." class="w-full rounded-xl border-slate-200 text-sm px-4 py-2.5 focus:border-primary focus:ring-primary">
                         </div>
                         
                         {{-- Estimación de precios --}}
@@ -184,6 +191,10 @@
                                 <option value="airport">Entrega en aeropuerto</option>
                                 <option value="hotel">Entrega en hotel</option>
                             </select>
+                        </div>
+                        <div x-show="pickupType !== 'office'" x-cloak class="mt-2 transition-all">
+                            <label class="block text-xs text-slate-400 mb-1">Dirección de entrega *</label>
+                            <input type="text" x-model="pickupAddress" placeholder="Calle, número, apto, etc." class="w-full rounded-xl border-slate-200 text-sm px-4 py-2.5 focus:border-primary focus:ring-primary">
                         </div>
                         
                         {{-- Estimación de precios --}}
