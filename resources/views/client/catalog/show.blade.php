@@ -17,7 +17,7 @@
                  x-data="{ activeImage: '{{ asset('storage/' . ($vehicle->primaryImage?->path ?? '')) }}' }">
                 <div class="h-72 bg-slate-50 flex items-center justify-center overflow-hidden p-4">
                     @if ($vehicle->primaryImage)
-                        <img :src="activeImage" class="w-full h-full object-contain" alt="{{ $vehicle->name }}">
+                        <img :src="activeImage" class="max-w-full h-full w-auto object-contain mx-auto" alt="{{ $vehicle->name }}">
                     @else 
                         <span class="text-7xl">🚗</span> 
                     @endif

@@ -10,7 +10,7 @@
     <a href="{{ route('vehicles.show', $vehicle) }}" class="block">
         <div class="h-40 bg-slate-50 flex items-center justify-center overflow-hidden p-3">
             @if ($img)
-                <img src="{{ $img }}" alt="{{ $vehicle->name }}" class="w-full h-full object-contain">
+                <img src="{{ $img }}" alt="{{ $vehicle->name }}" class="max-w-full h-full w-auto object-contain mx-auto">
             @else
                 <span class="text-slate-300 text-5xl">🚗</span>
             @endif
