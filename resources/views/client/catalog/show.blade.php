@@ -16,13 +16,13 @@
             <div class="bg-white rounded-2xl border border-slate-100 overflow-hidden">
                 <div class="h-72 bg-slate-100 grid place-items-center overflow-hidden">
                     @if ($vehicle->primaryImage)
-                        <img src="{{ \Illuminate\Support\Facades\Storage::disk('public')->url($vehicle->primaryImage->path) }}" class="w-full h-full object-cover" alt="">
+                        <img src="{{ asset('storage/' . $vehicle->primaryImage->path) }}" class="w-full h-full object-cover" alt="">
                     @else <span class="text-7xl">🚗</span> @endif
                 </div>
                 @if ($vehicle->images->count() > 1)
                     <div class="flex gap-2 p-3 overflow-x-auto">
                         @foreach ($vehicle->images as $img)
-                            <img src="{{ \Illuminate\Support\Facades\Storage::disk('public')->url($img->path) }}" class="w-20 h-16 object-cover rounded-lg border border-slate-100" alt="">
+                            <img src="{{ asset('storage/' . $img->path) }}" class="w-20 h-16 object-cover rounded-lg border border-slate-100" alt="">
                         @endforeach
                     </div>
                 @endif

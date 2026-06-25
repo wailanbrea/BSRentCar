@@ -2,7 +2,7 @@
 
 @php
     $img = $vehicle->primaryImage
-        ? \Illuminate\Support\Facades\Storage::disk('public')->url($vehicle->primaryImage->path)
+        ? asset('storage/' . $vehicle->primaryImage->path)
         : null;
 @endphp
 

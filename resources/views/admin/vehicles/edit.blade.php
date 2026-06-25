@@ -28,7 +28,7 @@
             <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
                 @foreach ($vehicle->images as $img)
                     <div class="relative group">
-                        <img src="{{ \Illuminate\Support\Facades\Storage::disk('public')->url($img->path) }}"
+                        <img src="{{ asset('storage/' . $img->path) }}"
                              alt="" class="w-full h-24 object-cover rounded-xl border border-slate-100">
                         @if ($img->is_primary)
                             <span class="absolute top-1 left-1 bg-primary text-white text-[10px] px-1.5 py-0.5 rounded">Principal</span>
