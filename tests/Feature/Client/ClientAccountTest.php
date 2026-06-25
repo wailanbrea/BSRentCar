@@ -154,4 +154,43 @@ class ClientAccountTest extends TestCase
         $response->assertSee($user->name);
         $response->assertDontSee('Mi cuenta');
     }
+
+    public function test_customer_can_book_with_delivery_address(): void
+    {
+        $user = $this->eligibleCustomerUser();
+        $vehicle = Vehicle::factory()->create();
+
+        $response = $this->actingAs($user)->post('/reservar', [
+            'vehicle_id' => $vehicle->id,
+            'start_datetime' => now()->addDays(3)->format('Y-m-d\TH:i'),
+            'end_datetime' => now()->addDays(5)->format('Y-m-d\TH:i'),
+            'pickup_type' => 'home',
+            'pickup_address' => 'Calle Duarte 45, Santo Domingo',
+        ]);
+
+        $response->assertRedirect();
+
+        $this->assertDatabaseHas('reservations', [
+            'vehicle_id' => $vehicle->id,
+            'pickup_type' => 'home',
+            'pickup_address' => 'Calle Duarte 45, Santo Domingo',
+        ]);
+    }
+
+    public function test_booking_fails_if_delivery_address_is_missing(): void
+    {
+        $user = $this->eligibleCustomerUser();
+        $vehicle = Vehicle::factory()->create();
+
+        $response = $this->actingAs($user)->post('/reservar', [
+            'vehicle_id' => $vehicle->id,
+            'start_datetime' => now()->addDays(3)->format('Y-m-d\TH:i'),
+            'end_datetime' => now()->addDays(5)->format('Y-m-d\TH:i'),
+            'pickup_type' => 'home',
+            // 'pickup_address' is missing
+        ]);
+
+        $response->assertSessionHasErrors(['pickup_address']);
+        $this->assertDatabaseCount('reservations', 0);
+    }
 }

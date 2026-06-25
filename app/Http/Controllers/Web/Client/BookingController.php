@@ -25,6 +25,7 @@ class BookingController extends Controller
             'start_datetime' => ['required', 'date', 'after:now'],
             'end_datetime' => ['required', 'date', 'after:start_datetime'],
             'pickup_type' => ['nullable', 'in:pickup_point,home,office,airport,hotel,custom'],
+            'pickup_address' => ['required_if:pickup_type,home,airport,hotel', 'nullable', 'string', 'max:255'],
         ]);
 
         $customer = $this->customers->createForUser($request->user());

@@ -17,7 +17,7 @@
                  x-data="{ activeImage: '{{ asset('storage/' . ($vehicle->primaryImage?->path ?? '')) }}' }">
                 <div class="h-72 bg-slate-50 flex items-center justify-center overflow-hidden p-4">
                     @if ($vehicle->primaryImage)
-                        <img :src="activeImage" class="max-w-full max-h-full object-contain mx-auto" alt="{{ $vehicle->name }}">
+                        <img :src="activeImage" class="w-full h-full object-contain" alt="{{ $vehicle->name }}">
                     @else 
                         <span class="text-7xl">🚗</span> 
                     @endif
@@ -79,7 +79,33 @@
 
         {{-- Sidebar precio --}}
         <div>
-            <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-6 sticky top-6">
+            <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-6 sticky top-6"
+                 x-data="{
+                     start: '',
+                     end: '',
+                     pickupType: 'office',
+                     dailyPrice: {{ (float) $vehicle->daily_price }},
+                     depositAmount: {{ (float) ($vehicle->deposit_amount ?? 0) }},
+                     currency: '{{ $vehicle->currency }}',
+                     get days() {
+                         if (!this.start || !this.end) return 0;
+                         const s = new Date(this.start);
+                         const e = new Date(this.end);
+                         if (isNaN(s.getTime()) || isNaN(e.getTime()) || e <= s) return 0;
+                         const diffMs = e.getTime() - s.getTime();
+                         const diffHours = diffMs / (1000 * 60 * 60);
+                         return Math.max(1, Math.ceil(diffHours / 24));
+                     },
+                     get subtotal() {
+                         return this.days * this.dailyPrice;
+                     },
+                     get tax() {
+                         return this.subtotal * 0.18;
+                     },
+                     get total() {
+                         return this.subtotal > 0 ? (this.subtotal + this.tax + this.depositAmount) : 0;
+                     }
+                 }">
                 <p class="text-3xl font-bold text-primary">{{ number_format((float) $vehicle->daily_price, 0) }} {{ $vehicle->currency }}<span class="text-slate-400 text-base font-normal">/día</span></p>
                 @if ($vehicle->rating_count > 0)
                     <p class="text-amber-500 text-sm mt-1">★ {{ number_format((float) $vehicle->rating_avg, 1) }} ({{ $vehicle->rating_count }})</p>
@@ -93,19 +119,100 @@
                         <input type="hidden" name="vehicle_id" value="{{ $vehicle->id }}">
                         <div>
                             <label class="block text-xs text-slate-400 mb-1">Recogida</label>
-                            <input type="datetime-local" name="start_datetime" required class="w-full rounded-xl border-slate-200 text-sm px-4 py-2.5 focus:border-primary focus:ring-primary">
+                            <input type="datetime-local" x-model="start" name="start_datetime" required class="w-full rounded-xl border-slate-200 text-sm px-4 py-2.5 focus:border-primary focus:ring-primary">
                         </div>
                         <div>
                             <label class="block text-xs text-slate-400 mb-1">Devolución</label>
-                            <input type="datetime-local" name="end_datetime" required class="w-full rounded-xl border-slate-200 text-sm px-4 py-2.5 focus:border-primary focus:ring-primary">
+                            <input type="datetime-local" x-model="end" name="end_datetime" required class="w-full rounded-xl border-slate-200 text-sm px-4 py-2.5 focus:border-primary focus:ring-primary">
                         </div>
-                        <input type="hidden" name="pickup_type" value="office">
-                        <button class="w-full rounded-full bg-primary hover:bg-primary-dark text-white font-medium py-3 transition">Reservar</button>
+                        <div>
+                            <label class="block text-xs text-slate-400 mb-1">Método de entrega</label>
+                            <select x-model="pickupType" name="pickup_type" class="w-full rounded-xl border-slate-200 text-sm px-4 py-2.5 focus:border-primary focus:ring-primary">
+                                <option value="office">Recogida en oficina (Gratis)</option>
+                                <option value="home">Entrega a domicilio</option>
+                                <option value="airport">Entrega en aeropuerto</option>
+                                <option value="hotel">Entrega en hotel</option>
+                            </select>
+                        </div>
+                        <div x-show="pickupType !== 'office'" x-cloak class="mt-2 transition-all">
+                            <label class="block text-xs text-slate-400 mb-1">Dirección de entrega *</label>
+                            <input type="text" name="pickup_address" :required="pickupType !== 'office'" placeholder="Calle, número, apto, etc." class="w-full rounded-xl border-slate-200 text-sm px-4 py-2.5 focus:border-primary focus:ring-primary">
+                        </div>
+                        
+                        {{-- Estimación de precios --}}
+                        <div x-show="days > 0" x-cloak class="mt-5 border-t border-slate-100 pt-4 space-y-2 text-sm text-slate-600">
+                            <div class="flex justify-between">
+                                <span>Días de renta:</span>
+                                <span class="font-semibold text-slate-800" x-text="days + ' días'"></span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span>Subtotal renta:</span>
+                                <span class="font-semibold text-slate-800" x-text="subtotal.toFixed(2) + ' ' + currency"></span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span>ITBIS (18%):</span>
+                                <span class="font-semibold text-slate-800" x-text="tax.toFixed(2) + ' ' + currency"></span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span>Depósito de garantía:</span>
+                                <span class="font-semibold text-slate-800" x-text="depositAmount.toFixed(2) + ' ' + currency"></span>
+                            </div>
+                            <div class="flex justify-between border-t border-slate-100 pt-2 text-base font-bold text-slate-800">
+                                <span>Total estimado (con depósito):</span>
+                                <span class="text-primary" x-text="total.toFixed(2) + ' ' + currency"></span>
+                            </div>
+                        </div>
+
+                        <button class="w-full rounded-full bg-primary hover:bg-primary-dark text-white font-medium py-3 transition mt-4">Reservar</button>
                     </form>
                     <p class="text-xs text-slate-400 text-center mt-3">El depósito se autoriza, no se cobra.</p>
                 @else
-                    <a href="{{ route('login') }}" class="mt-5 block text-center rounded-full bg-primary hover:bg-primary-dark text-white font-medium py-3 transition">Inicia sesión para reservar</a>
-                    <p class="text-xs text-slate-400 text-center mt-3">¿No tienes cuenta? <a href="{{ route('register') }}" class="text-primary hover:underline">Regístrate</a></p>
+                    <div class="mt-5 space-y-3">
+                        <div>
+                            <label class="block text-xs text-slate-400 mb-1">Recogida</label>
+                            <input type="datetime-local" x-model="start" class="w-full rounded-xl border-slate-200 text-sm px-4 py-2.5 focus:border-primary focus:ring-primary">
+                        </div>
+                        <div>
+                            <label class="block text-xs text-slate-400 mb-1">Devolución</label>
+                            <input type="datetime-local" x-model="end" class="w-full rounded-xl border-slate-200 text-sm px-4 py-2.5 focus:border-primary focus:ring-primary">
+                        </div>
+                        <div>
+                            <label class="block text-xs text-slate-400 mb-1">Método de entrega</label>
+                            <select x-model="pickupType" class="w-full rounded-xl border-slate-200 text-sm px-4 py-2.5 focus:border-primary focus:ring-primary">
+                                <option value="office">Recogida en oficina (Gratis)</option>
+                                <option value="home">Entrega a domicilio</option>
+                                <option value="airport">Entrega en aeropuerto</option>
+                                <option value="hotel">Entrega en hotel</option>
+                            </select>
+                        </div>
+                        
+                        {{-- Estimación de precios --}}
+                        <div x-show="days > 0" x-cloak class="mt-5 border-t border-slate-100 pt-4 space-y-2 text-sm text-slate-600">
+                            <div class="flex justify-between">
+                                <span>Días de renta:</span>
+                                <span class="font-semibold text-slate-800" x-text="days + ' días'"></span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span>Subtotal renta:</span>
+                                <span class="font-semibold text-slate-800" x-text="subtotal.toFixed(2) + ' ' + currency"></span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span>ITBIS (18%):</span>
+                                <span class="font-semibold text-slate-800" x-text="tax.toFixed(2) + ' ' + currency"></span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span>Depósito de garantía:</span>
+                                <span class="font-semibold text-slate-800" x-text="depositAmount.toFixed(2) + ' ' + currency"></span>
+                            </div>
+                            <div class="flex justify-between border-t border-slate-100 pt-2 text-base font-bold text-slate-800">
+                                <span>Total estimado (con depósito):</span>
+                                <span class="text-primary" x-text="total.toFixed(2) + ' ' + currency"></span>
+                            </div>
+                        </div>
+
+                        <a href="{{ route('login') }}" class="block text-center rounded-full bg-primary hover:bg-primary-dark text-white font-medium py-3 transition mt-4">Inicia sesión para reservar</a>
+                        <p class="text-xs text-slate-400 text-center mt-3">¿No tienes cuenta? <a href="{{ route('register') }}" class="text-primary hover:underline">Regístrate</a></p>
+                    </div>
                 @endauth
             </div>
         </div>
