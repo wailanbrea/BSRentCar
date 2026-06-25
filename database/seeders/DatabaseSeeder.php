@@ -98,12 +98,73 @@ class DatabaseSeeder extends Seeder
                 ]);
 
                 if (isset($imageNames[$name])) {
+                    // 1. Imagen principal (Frente)
                     $vehicle->images()->create([
                         'path' => $imageNames[$name],
                         'is_primary' => true,
                         'sort_order' => 0,
-                        'alt' => $name,
+                        'alt' => $name . ' - Frente',
                     ]);
+
+                    // 2, 3, 4. Imagen Trasera, Interior y Lateral
+                    if ($name === 'Hyundai Sonata') {
+                        $vehicle->images()->create([
+                            'path' => 'vehicles/hyundai_sonata_back.png',
+                            'is_primary' => false,
+                            'sort_order' => 1,
+                            'alt' => $name . ' - Trasera',
+                        ]);
+                        $vehicle->images()->create([
+                            'path' => 'vehicles/hyundai_sonata_interior.png',
+                            'is_primary' => false,
+                            'sort_order' => 2,
+                            'alt' => $name . ' - Interior',
+                        ]);
+                        $vehicle->images()->create([
+                            'path' => 'vehicles/hyundai_sonata_side.png',
+                            'is_primary' => false,
+                            'sort_order' => 3,
+                            'alt' => $name . ' - Lateral',
+                        ]);
+                    } elseif ($category === 'suv') {
+                        $vehicle->images()->create([
+                            'path' => 'vehicles/generic_suv_back.png',
+                            'is_primary' => false,
+                            'sort_order' => 1,
+                            'alt' => $name . ' - Trasera',
+                        ]);
+                        $vehicle->images()->create([
+                            'path' => 'vehicles/generic_suv_interior.png',
+                            'is_primary' => false,
+                            'sort_order' => 2,
+                            'alt' => $name . ' - Interior',
+                        ]);
+                        $vehicle->images()->create([
+                            'path' => 'vehicles/generic_suv_side.png',
+                            'is_primary' => false,
+                            'sort_order' => 3,
+                            'alt' => $name . ' - Lateral',
+                        ]);
+                    } else {
+                        $vehicle->images()->create([
+                            'path' => 'vehicles/generic_sedan_back.png',
+                            'is_primary' => false,
+                            'sort_order' => 1,
+                            'alt' => $name . ' - Trasera',
+                        ]);
+                        $vehicle->images()->create([
+                            'path' => 'vehicles/generic_sedan_interior.png',
+                            'is_primary' => false,
+                            'sort_order' => 2,
+                            'alt' => $name . ' - Interior',
+                        ]);
+                        $vehicle->images()->create([
+                            'path' => 'vehicles/generic_sedan_side.png',
+                            'is_primary' => false,
+                            'sort_order' => 3,
+                            'alt' => $name . ' - Lateral',
+                        ]);
+                    }
                 }
             }
         }

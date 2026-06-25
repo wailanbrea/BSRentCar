@@ -13,16 +13,26 @@
     <div class="max-w-7xl mx-auto px-4 sm:px-6 grid lg:grid-cols-3 gap-8">
         {{-- Galería + info --}}
         <div class="lg:col-span-2 space-y-6">
-            <div class="bg-white rounded-2xl border border-slate-100 overflow-hidden">
+            <div class="bg-white rounded-2xl border border-slate-100 overflow-hidden"
+                 x-data="{ activeImage: '{{ asset('storage/' . ($vehicle->primaryImage?->path ?? '')) }}' }">
                 <div class="h-72 bg-slate-50 flex items-center justify-center overflow-hidden p-4">
                     @if ($vehicle->primaryImage)
-                        <img src="{{ asset('storage/' . $vehicle->primaryImage->path) }}" class="max-w-full max-h-full object-contain mx-auto" alt="">
-                    @else <span class="text-7xl">🚗</span> @endif
+                        <img :src="activeImage" class="max-w-full max-h-full object-contain mx-auto" alt="{{ $vehicle->name }}">
+                    @else 
+                        <span class="text-7xl">🚗</span> 
+                    @endif
                 </div>
                 @if ($vehicle->images->count() > 1)
-                    <div class="flex gap-2 p-3 overflow-x-auto">
+                    <div class="flex gap-2 p-3 overflow-x-auto bg-slate-50/50 border-t border-slate-100">
                         @foreach ($vehicle->images as $img)
-                            <img src="{{ asset('storage/' . $img->path) }}" class="w-20 h-16 object-cover rounded-lg border border-slate-100" alt="">
+                            @php $url = asset('storage/' . $img->path); @endphp
+                            <button type="button" @click="activeImage = '{{ $url }}'"
+                                    class="focus:outline-none transition transform hover:scale-105">
+                                <img src="{{ $url }}"
+                                     :class="activeImage === '{{ $url }}' ? 'border-primary ring-2 ring-primary/20' : 'border-slate-200'"
+                                     class="w-24 h-16 object-contain bg-white rounded-lg border-2 p-1"
+                                     alt="{{ $img->alt }}">
+                            </button>
                         @endforeach
                     </div>
                 @endif
