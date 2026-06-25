@@ -14,9 +14,9 @@
         {{-- Galería + info --}}
         <div class="lg:col-span-2 space-y-6">
             <div class="bg-white rounded-2xl border border-slate-100 overflow-hidden">
-                <div class="h-72 bg-slate-100 grid place-items-center overflow-hidden">
+                <div class="h-72 bg-slate-50 flex items-center justify-center overflow-hidden p-4">
                     @if ($vehicle->primaryImage)
-                        <img src="{{ asset('storage/' . $vehicle->primaryImage->path) }}" class="w-full h-full object-cover" alt="">
+                        <img src="{{ asset('storage/' . $vehicle->primaryImage->path) }}" class="max-w-full max-h-full object-contain mx-auto" alt="">
                     @else <span class="text-7xl">🚗</span> @endif
                 </div>
                 @if ($vehicle->images->count() > 1)

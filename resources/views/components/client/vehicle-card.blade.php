@@ -8,9 +8,9 @@
 
 <div class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden hover:shadow-md transition">
     <a href="{{ route('vehicles.show', $vehicle) }}" class="block">
-        <div class="h-40 bg-slate-100 flex items-center justify-center overflow-hidden">
+        <div class="h-40 bg-slate-50 flex items-center justify-center overflow-hidden p-3">
             @if ($img)
-                <img src="{{ $img }}" alt="{{ $vehicle->name }}" class="w-full h-full object-cover">
+                <img src="{{ $img }}" alt="{{ $vehicle->name }}" class="max-w-full max-h-full object-contain mx-auto">
             @else
                 <span class="text-slate-300 text-5xl">🚗</span>
             @endif
