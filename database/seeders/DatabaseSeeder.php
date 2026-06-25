@@ -68,8 +68,19 @@ class DatabaseSeeder extends Seeder
                 ['Corolla Civic Hybrid', 'economy', 'manual', 5, '55.00'],
             ];
 
+            $imageNames = [
+                'Hyundai Sonata' => 'vehicles/hyundai_sonata.png',
+                'Toyota Crown 2023' => 'vehicles/toyota_crown.png',
+                'Prius Prime SE' => 'vehicles/prius_prime.png',
+                'Subaru Legacy' => 'vehicles/subaru_legacy.png',
+                'Genesis G80' => 'vehicles/genesis_g80.png',
+                'Nissan Rogue' => 'vehicles/nissan_rogue.png',
+                'Volvo XC60' => 'vehicles/volvo_xc60.png',
+                'Corolla Civic Hybrid' => 'vehicles/corolla_civic.png',
+            ];
+
             foreach ($demo as $i => [$name, $category, $transmission, $seats, $price]) {
-                Vehicle::create([
+                $vehicle = Vehicle::create([
                     'name' => $name,
                     'brand' => explode(' ', $name)[0],
                     'category' => $category,
@@ -85,6 +96,15 @@ class DatabaseSeeder extends Seeder
                     'status' => 'available',
                     'description' => 'Vehículo de demostración para el catálogo.',
                 ]);
+
+                if (isset($imageNames[$name])) {
+                    $vehicle->images()->create([
+                        'path' => $imageNames[$name],
+                        'is_primary' => true,
+                        'sort_order' => 0,
+                        'alt' => $name,
+                    ]);
+                }
             }
         }
     }
